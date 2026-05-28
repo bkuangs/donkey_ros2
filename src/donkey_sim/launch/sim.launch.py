@@ -1,17 +1,21 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
-from launch.actions import RegisterEventHandler
-from launch.event_handlers import OnProcessExit
 
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
     world = LaunchConfiguration("world")
+    
+    pkg_dir = get_package_share_directory('donkey_sim')
+    bridge_yaml_path = os.path.join(pkg_dir, 'config', 'bridge.yaml')
 
     default_world = PathJoinSubstitution([
         FindPackageShare("donkey_sim"),
@@ -20,9 +24,9 @@ def generate_launch_description():
     ])
 
     xacro_file = PathJoinSubstitution([
-        FindPackageShare("donkey_sim"),
+        FindPackageShare("donkey_description"),
         "urdf",
-        "donkey_sim.urdf.xacro",
+        "donkey_car.urdf.xacro",
     ])
 
     robot_description = {
@@ -61,11 +65,12 @@ def generate_launch_description():
             "-topic", "robot_description",
             "-x", "0.0",
             "-y", "0.0",
-            "-z", "0.05",
+            "-z", "0.0",
         ],
         output="screen",
     )
 
+    # --- Controller Spawners ---
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -77,36 +82,47 @@ def generate_launch_description():
         output="screen",
     )
 
-    front_steer_controller_spawner = Node(
+    ackermann_steering_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "front_steer_controller",
+            "ackermann_steering_controller",
             "--controller-manager",
             "/controller_manager",
         ],
         output="screen",
     )
 
-    rear_wheel_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[
-            "rear_wheel_controller",
-            "--controller-manager",
-            "/controller_manager",
-        ],
+    # --- Bridges ---
+    sensor_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        parameters=[{'config_file': bridge_yaml_path}],  # Fixed missing comma
         output="screen",
     )
 
-    spawn_controllers = RegisterEventHandler(
+    image_bridge = Node(
+        package="ros_gz_image",
+        executable="image_bridge",
+        arguments=["/camera/image_raw"],  # Enhanced mapping syntax
+        parameters=[{"qos": "sensor_data"}],
+        output="screen",
+    )
+
+    # --- Deterministic Order Sequence ---
+    # 1. Wait for robot to spawn -> Then load joint state broadcaster
+    load_joint_state_broadcaster = RegisterEventHandler(
         OnProcessExit(
             target_action=spawn_robot,
-            on_exit=[
-                joint_state_broadcaster_spawner,
-                front_steer_controller_spawner,
-                rear_wheel_controller_spawner,
-            ],
+            on_exit=[joint_state_broadcaster_spawner],
+        )
+    )
+
+    # 2. Wait for joint state broadcaster -> Then load Ackermann controller
+    load_ackermann_controller = RegisterEventHandler(
+        OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[ackermann_steering_controller_spawner],
         )
     )
 
@@ -124,5 +140,10 @@ def generate_launch_description():
         gazebo,
         robot_state_publisher,
         spawn_robot,
-        spawn_controllers,
+        sensor_bridge,
+        image_bridge,
+        
+        # Load the sequential event handlers instead of direct nodes
+        load_joint_state_broadcaster,
+        load_ackermann_controller,
     ])

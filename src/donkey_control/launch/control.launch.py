@@ -46,7 +46,7 @@ def generate_launch_description():
             "use_sim_time": True,
             "input_topic": "/drive_cmd",
             "steering_topic": "/front_steer_controller/commands",
-            "wheel_topic": "/rear_wheel_controller/commands",
+            "wheel_topic": "/wheel_controller/commands",
             "wheel_radius": 0.033,
             "max_speed": 1.0,
             "max_reverse_speed": 1.0,
