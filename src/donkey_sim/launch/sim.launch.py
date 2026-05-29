@@ -24,9 +24,9 @@ def generate_launch_description():
     ])
 
     xacro_file = PathJoinSubstitution([
-        FindPackageShare("donkey_description"),
+        FindPackageShare("donkey_sim"),
         "urdf",
-        "donkey_car.urdf.xacro",
+        "donkey_sim.urdf.xacro",
     ])
 
     robot_description = {
@@ -109,6 +109,19 @@ def generate_launch_description():
         output="screen",
     )
 
+    cmd_vel_stamper = Node(
+        package="donkey_sim",
+        executable="cmd_vel_stamper.py",
+        name="cmd_vel_stamper",
+        parameters=[
+            {"use_sim_time": use_sim_time},
+            {"frame_id": "base_link"},
+            {"input_topic": "/cmd_vel"},
+            {"output_topic": "/ackermann_steering_controller/reference"},
+        ],
+        output="screen",
+    )
+
     # --- Deterministic Order Sequence ---
     # 1. Wait for robot to spawn -> Then load joint state broadcaster
     load_joint_state_broadcaster = RegisterEventHandler(
@@ -124,6 +137,20 @@ def generate_launch_description():
             target_action=joint_state_broadcaster_spawner,
             on_exit=[ackermann_steering_controller_spawner],
         )
+    )
+
+    rviz_config = PathJoinSubstitution([
+        FindPackageShare("donkey_sim"),
+        "rviz",
+        "display.rviz",
+    ])
+
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        arguments=["-d", rviz_config],
+        parameters=[{"use_sim_time": use_sim_time}],
+        output="screen",
     )
 
     return LaunchDescription([
@@ -142,8 +169,10 @@ def generate_launch_description():
         spawn_robot,
         sensor_bridge,
         image_bridge,
+        cmd_vel_stamper,
         
         # Load the sequential event handlers instead of direct nodes
         load_joint_state_broadcaster,
         load_ackermann_controller,
+        rviz,
     ])

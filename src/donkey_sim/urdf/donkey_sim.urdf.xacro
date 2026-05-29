@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="donkey_car">
+
+  <xacro:include filename="$(find donkey_description)/urdf/donkey_car.urdf.xacro" />
+  <xacro:include filename="$(find donkey_sim)/urdf/sim_camera.xacro" />
+  <xacro:include filename="$(find donkey_sim)/urdf/sim_imu.xacro" />
+  <xacro:include filename="$(find donkey_sim)/urdf/ros2_control.xacro"/>
+
+</robot>

@@ -4,7 +4,12 @@ project(donkey_sim)
 find_package(ament_cmake REQUIRED)
 
 install(
-  DIRECTORY launch config worlds urdf
+  PROGRAMS scripts/cmd_vel_stamper.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY launch config worlds urdf rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
