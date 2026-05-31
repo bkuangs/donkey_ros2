@@ -19,18 +19,18 @@ ackermann_steering_controller:
       - rear_left_wheel_joint
 
     # Kinematics Calibration
-    wheelbase: 0.24        # Distance between front and rear axles
+    wheelbase: 0.24        
     traction_track_width: 0.18
     steering_track_width: 0.18
     traction_wheels_radius: 0.033
 
     # Odometry Configuration
-    position_feedback: true # Use joint encoder feedback to compute odom
-    open_loop: false        # False means it calculates odometry from encoder state feedback
+    position_feedback: false      # Use joint velocity state to compute odom (true uses position -> .nan)
+    open_loop: false              # False means it calculates odometry from encoder state feedback
 
     # Frames
     odom_frame_id: odom
-    base_frame_id: base_link
+    base_frame_id: base_footprint
     enable_odom_tf: true
 
     reference_timeout: 2.0

@@ -70,7 +70,7 @@ def generate_launch_description():
         output="screen",
     )
 
-    # --- Controller Spawners ---
+    # --- Spawn controllers ---
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -93,11 +93,11 @@ def generate_launch_description():
         output="screen",
     )
 
-    # --- Bridges ---
+    # --- Gazebo bridges ---
     sensor_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        parameters=[{'config_file': bridge_yaml_path}],  # Fixed missing comma
+        parameters=[{'config_file': bridge_yaml_path}],
         output="screen",
     )
 
@@ -122,8 +122,7 @@ def generate_launch_description():
         output="screen",
     )
 
-    # --- Deterministic Order Sequence ---
-    # 1. Wait for robot to spawn -> Then load joint state broadcaster
+    # 1. Wait for robot to spawn -> load joint state broadcaster
     load_joint_state_broadcaster = RegisterEventHandler(
         OnProcessExit(
             target_action=spawn_robot,
@@ -131,7 +130,7 @@ def generate_launch_description():
         )
     )
 
-    # 2. Wait for joint state broadcaster -> Then load Ackermann controller
+    # 2. Wait for joint state broadcaster -> load Ackermann controller
     load_ackermann_controller = RegisterEventHandler(
         OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
@@ -157,7 +156,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "use_sim_time",
             default_value="true",
-            description="Use simulation time from Gazebo",
+            description="Use sim time from Gazebo",
         ),
         DeclareLaunchArgument(
             "world",
