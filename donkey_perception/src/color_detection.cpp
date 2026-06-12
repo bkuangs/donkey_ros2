@@ -7,6 +7,16 @@
 #include "cv_bridge/cv_bridge.hpp"
 #include "opencv2/opencv.hpp"
 
+
+/*
+subscribe to raw camera images,
+convert to openCV cv::Mat,
+convert rgb -> hsv,
+build a red color mask
+find contours and choose largest
+compute centroid of that contour using moments
+publish point stamped
+*/
 class ColorDetection : public rclcpp::Node
 {
 public: 
@@ -81,5 +91,35 @@ private:
             return;
 
         cv::Moments m = cv::moments(*largest);
+        if (m.m00 == 0.0)
+            return;
+
+        // define pixel coordinates of centroid
+        double cx = m.m10 / m.m00;
+        double cy = m.m01 / m.m00;
+
+        // publish
+        geometry_msgs::msg::PointStamped target_msg;
+        target_msg.header = msg->header;
+        target_msg.point.x = cx;
+        target_msg.point.y = cy;
+        target_msg.point.z = area;  // z is the area of the contour, not depth
+
+        target_pub_->publish(target_msg);
+
+        RCLCPP_INFO(this->get_logger(), 
+        "Target detected at x=%.1f, y=%.1f, area=%.1f",
+        cx, cy, area);
     }
+
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr target_pub_;
+};
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<ColorDetection>());
+  rclcpp::shutdown();
+  return 0;
 }
