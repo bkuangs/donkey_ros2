@@ -14,4 +14,16 @@ Program the car to identify, lock onto, and physically intercept a moving target
 - _perception: Target detection from images (OpenCV)
 - _tracking: Target state estimatation (EKF)
 - _control: Pure pursuit, PID controller
-- _navigation: Decides where the vehicle should go (/nav/path + /nav/goal)
+- _navigation: Decides where the vehicle should go (/nav/path + /nav/goal)  
+
+Stage 1: Naive point-to-path
+EKF target estimate → generate short /nav/path → pure pursuit.
+
+Stage 2: Tracking pose generator
+EKF target estimate → compute following pose → generate straight/simple path → pure pursuit.
+
+Stage 3: Hybrid A*
+EKF target estimate → following pose → Hybrid A* → /nav/path → pure pursuit.
+
+Stage 4: Nav2-style
+EKF target estimate → dynamic Nav2 goal → SmacPlannerHybrid → Nav2 controller or your pure pursuit.
