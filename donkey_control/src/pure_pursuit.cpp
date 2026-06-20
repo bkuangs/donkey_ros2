@@ -11,6 +11,27 @@
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
 
 
+/*
+TODO:
+Simple version: (Current)
+- assumes path and odom are same frame
+- manually subtracts vehicle position from path point
+- uses fixed lookahead
+- weak stale-data handling
+- okay for first sim
+
+Serious version:
+- uses TF2 to transform path points into base_link
+- checks timestamps
+- rejects stale data
+- rejects invalid lookahead points
+- has emergency stop behavior
+- uses adaptive lookahead
+- separates planner speed from controller speed
+- safer for real robot / messy sim
+*/
+
+
 //// /odom + /nav/path -> /drive
 class PurePursuit() : public rclcpp::Node
 {
@@ -167,17 +188,212 @@ private:
     return dist_to_goal < goal_tolerance_;
   }
 
+  /**
+   * pure pursuit: 
+
+   */
   double purePursuit(const geometry_msgs::msg::Point &target_point)
   {
     const double dx = target_point.x - x_curr_;
     const double dy = target_point.y - y_curr_;
+
+    // transform lookahead point from world to vehicle frame
+    const double x_vehicle = std::cos(yaw_curr_) * dx + std::sin(yaw_curr_) * dy;
+    const double y_vehicle = -std::sin(yaw_curr_) * dx + std::cos(yaw_curr_) * dy;
+    const double lookahead = std::sqrt(x_vehicle * x_vehicle + y_vehicle * y_vehicle);
+
+    if (lookahead < 1e-6)
+      return 0.0;
+
+    const double alpha = std::atan2(y_vehicle, x_vehicle);
+
+    // pure pursuit steering: steering_angle = atan(2 * L * sin(alpha) / Ld)
+    double steering_angle = std::atan2(
+      2.0 * wheel_base_ * std::sin(alpha),
+      lookahead
+    );
+
+    steering_angle = clamp(steering_angle, -max_steering_angle_, max_steering_angle_);
+
+    return steering_angle;
   }
-}
+
+  double pidControl(double desired_speed, double dt)
+  {
+    const double error = desired_speed - current_speed_;
+
+    integral_error_ += error * dt;
+    integral_error_ = clamp(integral_error_, -integral_limit_, integral_limit_);
+
+    double derivative = 0.0;
+    
+    if (have_previous_error_ && dt > 1e-6) {
+      derivative = (error - previous_error_) / dt;
+    }
+
+    previous_error_ = error;
+    have_previous_error_ = true;
+
+    double accel_cmd = 
+      kp_ * error + 
+      ki_ * integral_error_ + 
+      kd_ * derivative;
+
+    accel_cmd = clamp(accel_cmd, -max_accel_, max_accel_);
+
+    return accel_cmd;
+  }
+
+  void publishStop()
+  {
+    ackermann_msgs::msg::AckermannDriveStamped cmd;
+    cmd.header.stamp = this->now();
+    cmd.header.frame_id = "base_link";
+
+    cmd.drive.steering_angle = 0.0;
+    cmd.drive.speed = 0.0;
+    cmd.drive.acceleration = 0.0;
+
+    drive_pub_->publish(cmd);
+  }
+
+  void controlLoop()
+  {
+    if (!have_odom_) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(),
+        *this->get_clock(),
+        1000,
+        "Waiting for odometry..."
+      );
+      publishStop();
+      return;
+    }
+
+    if (!have_path_) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(),
+        *this->get_clock(),
+        1000,
+        "Waiting for path..."
+      );
+      publishStop();
+      return;
+    }
+
+    if (reachedGoal()) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(),
+        *this->get_clock(),
+        1000,
+        "Goal reached. Stopping."
+      );
+      publishStop();
+      return;
+    }
+
+    const rclcpp::Time now = this->now();
+    double dt = (now - last_time_).seconds();
+    last_time_ = now();
+
+    if (dt <= 0.0 || dt > 1.0)
+      dt = 1.0 / control_rate_hz_;
+
+    geometry_msgs::msg::Point lookahead_point;
+
+    if (!findLookaheadPoint(lookahead_point)) {
+      publishStop();
+      return;
+    }
+
+    const double steering_angle = purePursuit(lookahead_point);
+
+    // slow down for sharper turns
+    const double steering_fraction = std::abs(steering_angle) / std::max(max_steering_angle_, 1e-6);
+    const double speed_scale = clamp(1.0 - 0.5 * steering_fraction, 0.35, 1.0);
+
+    const double desired_speed = clamp(
+      target_speed_ * speed_scale,
+      min_speed_,
+      max_speed_
+    );
+    const double accel_cmd = pidControl(desired_speed, dt);
+
+    ackermann_msgs::msg::AckermannDriveStamped cmd;
+    cmd.header.stamp = now;
+    cmd.header.frame_id = "base_link";
+
+    cmd.drive.steering_angle = steering_angle;
+    cmd.drive.speed = desired_speed;
+    cmd.drive.acceleration = accel_cmd;
+
+    drive_pub_->publish(cmd);
+
+    RCLCPP_DEBUG(
+      this->get_logger(),
+      "steer=%.3f rad, desired_speed=%.3f m/s, current_speed=%.3f m/s, accel=%.3f",
+      steering_angle,
+      desired_speed,
+      current_speed_,
+      accel_cmd
+    );
+  }
+
+  // ROS interfaces
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;
+  rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_pub_;
+  rclcpp::TimerBase::SharedPtr control_timer_;
+
+  // Topics
+  std::string odom_topic_;
+  std::string path_topic_;
+  std::string drive_topic_;
+
+  // Vehicle state
+  double current_x_ = 0.0;
+  double current_y_ = 0.0;
+  double current_yaw_ = 0.0;
+  double current_speed_ = 0.0;
+
+  bool have_odom_ = false;
+  bool have_path_ = false;
+
+  nav_msgs::msg::Path latest_path_;
+
+  // Pure pursuit params
+  double wheel_base_;
+  double lookahead_distance_;
+  double max_steering_angle_;
+
+  // Speed params
+  double target_speed_;
+  double min_speed_;
+  double max_speed_;
+  double max_accel_;
+
+  // PID params
+  double kp_;
+  double ki_;
+  double kd_;
+  double integral_limit_;
+
+  double integral_error_ = 0.0;
+  double previous_error_ = 0.0;
+  bool have_previous_error_ = false;
+
+  // Goal params
+  double goal_tolerance_;
+
+  // Timing
+  double control_rate_hz_;
+  rclcpp::Time last_time_;
+};
 
 int main(int argc, char ** argv)
 {
-  (void) argc;
-  (void) argv;
-
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<PurePursuitPidNode>());
+  rclcpp::shutdown();
   return 0;
 }
