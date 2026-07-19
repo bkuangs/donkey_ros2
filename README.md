@@ -26,4 +26,12 @@ Stage 3: Hybrid A*
 EKF target estimate → following pose → Hybrid A* → /nav/path → pure pursuit.
 
 Stage 4: Nav2-style
-EKF target estimate → dynamic Nav2 goal → SmacPlannerHybrid → Nav2 controller or your pure pursuit.
+EKF target estimate → dynamic Nav2 goal → SmacPlannerHybrid → Nav2 controller or your pure pursuit.  
+
+```
+camera /camera/image_raw ─┐
+                          ├─► OpenVINS (ov_msckf) ─► /ov_msckf/odomimu ─► [vio adapter] ─► /vio/odom ─┐
+IMU    /imu/data ─────────┘                                                                           ├─► robot_localization EKF ─► /odometry/filtered
+wheel  /odom ────────────────────────────────────────────────────────────────────────────────────────-┤
+IMU    /imu/data ─────────────────────────────────────────────────────────────────────────────────────┘
+```
