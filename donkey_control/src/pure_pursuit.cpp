@@ -13,7 +13,6 @@
 #include "nav_msgs/msg/path.hpp"
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
 
-
 /*
 TODO:
 Simple version: (Current)
@@ -34,13 +33,12 @@ Serious version:
 - safer for real robot / messy sim
 */
 
-
 //// /odom + /nav/path -> /drive
 class PurePursuit : public rclcpp::Node
 {
 public:
   PurePursuit()
-  : Node("pure_pursuit")
+      : Node("pure_pursuit")
   {
     // params
     // TODO: tune
@@ -59,32 +57,28 @@ public:
     integral_limit_ = this->declare_parameter<double>("integral_limit", 5.0);
 
     control_rate_hz_ = this->declare_parameter<double>("control_rate_hz", 20.0);
-    path_timeout_sec_ = tthis->declare_parameter<double>("path_timeout_sec", 0.5);
+    path_timeout_sec_ = this->declare_parameter<double>("path_timeout_sec", 0.5);
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/odom",
-      10,
-      std::bind(&PurePursuit::odomCallback, this, std::placeholders::_1)
-    );
+        "/odom",
+        10,
+        std::bind(&PurePursuit::odomCallback, this, std::placeholders::_1));
 
     path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
-      "/nav/path",
-      10,
-      std::bind(&PurePursuit::pathCallback, this, std::placeholders::_1)
-    );
+        "/nav/path",
+        10,
+        std::bind(&PurePursuit::pathCallback, this, std::placeholders::_1));
 
-    drive_pub_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped(
-      "/drive",
-      10,
-    );
+    drive_pub_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>(
+        "/drive",
+        10, );
 
     const auto period_ms = static_cast<int>(1000.0 / control_rate_hz_);
 
     // set periodic execution for control loop (node heartbeat)
     control_timer_ = this->create_wall_timer(
-      std::chrono::milliseconds(period_ms),
-      std::bind(&PurePursuit::controlLoop, this)
-    );
+        std::chrono::milliseconds(period_ms),
+        std::bind(&PurePursuit::controlLoop, this));
 
     last_time_ = this->now();
 
@@ -98,7 +92,7 @@ private:
   }
 
   // odom contains 4D quaternion, we only care about yaw (direction)
-  static double quaternionToYaw(const geometry_msgs::msg::Quaternion& q)
+  static double quaternionToYaw(const geometry_msgs::msg::Quaternion &q)
   {
     const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
     const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
@@ -106,10 +100,10 @@ private:
   }
 
   static double distance(
-    double x1,
-    double y1,
-    double x2,
-    double y2)
+      double x1,
+      double y1,
+      double x2,
+      double y2)
   {
     const double dx = x2 - x1;
     const double dy = y2 - y1;
@@ -131,17 +125,17 @@ private:
     have_path_ = !latest_path_.poses.empty();
     last_path_time_ = this->now();
 
-    if (have_path_) {
+    if (have_path_)
+    {
       RCLCPP_INFO(
-        this->get_logger(),
-        "Received path with %zu poses.",
-        latest_path_.poses.size()
-      );
+          this->get_logger(),
+          "Received path with %zu poses.",
+          latest_path_.poses.size());
     }
   }
 
-  // @brief 
-  bool findLookaheadPoint(geometry_msgs::msg::Point & lookahead_point)
+  // @brief
+  bool findLookaheadPoint(geometry_msgs::msg::Point &lookahead_point)
   {
     if (!have_path_)
       return false;
@@ -150,29 +144,34 @@ private:
     size_t nearest_index = 0;
 
     // find nearest path point
-    for (size_t i = 0; i < latest_path_.poses.size(); ++i) {
+    for (size_t i = 0; i < latest_path_.poses.size(); ++i)
+    {
       const auto &p = latest_path_.poses[i].pose.position;
       const double d = distance(x_curr_, y_curr_, p.x, p.y);
 
-      if (d < nearest_dist) {
+      if (d < nearest_dist)
+      {
         nearest_dist = d;
         nearest_index = i;
       }
     }
 
     // from that point, find first point at least lookahead dist
-    for (size_t i = nearest_index; i < latest_path_.poses.size(); ++i) {
-      const auto & p = latest_path_.poses[i].pose.position;
+    for (size_t i = nearest_index; i < latest_path_.poses.size(); ++i)
+    {
+      const auto &p = latest_path_.poses[i].pose.position;
       const double d = distance(x_curr_, y_curr_, p.x, p.y);
 
-      if (d >= lookahead_distance_) {
+      if (d >= lookahead_distance_)
+      {
         // TODO: reject points behind vehicle
         const double dx = p.x - x_curr_;
         const double dy = p.y - y_curr_;
 
         const double x_vehicle = std::cos(yaw_curr_) * dx + std::sin(yaw_curr_) * dy;
 
-        if (x_vehicle > 0.0) {
+        if (x_vehicle > 0.0)
+        {
           lookahead_point = p;
           return true;
         }
@@ -180,12 +179,13 @@ private:
     }
 
     // if no point is far enough, use the final path point only if it's ahead
-    const auto & last = latest_path_.poses.back().pose.position;
+    const auto &last = latest_path_.poses.back().pose.position;
     const double dx = last.x - x_curr_;
     const double dy = last.y - y_curr_;
     const double x_vehicle = std::cos(yaw_curr_) * dx + std::sin(yaw_curr_) * dy;
 
-    if (x_vehicle > 0.0) {
+    if (x_vehicle > 0.0)
+    {
       lookahead_point = last;
       return true;
     }
@@ -211,9 +211,8 @@ private:
 
     // pure pursuit steering: steering_angle = atan(2 * L * sin(alpha) / Ld)
     double steering_angle = std::atan2(
-      2.0 * wheel_base_ * std::sin(alpha),
-      lookahead
-    );
+        2.0 * wheel_base_ * std::sin(alpha),
+        lookahead);
 
     steering_angle = clamp(steering_angle, -max_steering_angle_, max_steering_angle_);
 
@@ -228,18 +227,19 @@ private:
     integral_error_ = clamp(integral_error_, -integral_limit_, integral_limit_);
 
     double derivative = 0.0;
-    
-    if (have_previous_error_ && dt > 1e-6) {
+
+    if (have_previous_error_ && dt > 1e-6)
+    {
       derivative = (error - previous_error_) / dt;
     }
 
     previous_error_ = error;
     have_previous_error_ = true;
 
-    double accel_cmd = 
-      kp_ * error + 
-      ki_ * integral_error_ + 
-      kd_ * derivative;
+    double accel_cmd =
+        kp_ * error +
+        ki_ * integral_error_ +
+        kd_ * derivative;
 
     accel_cmd = clamp(accel_cmd, -max_accel_, max_accel_);
 
@@ -261,36 +261,36 @@ private:
 
   void controlLoop()
   {
-    if (!have_odom_) {
+    if (!have_odom_)
+    {
       RCLCPP_WARN_THROTTLE(
-        this->get_logger(),
-        *this->get_clock(),
-        1000,
-        "Waiting for odometry..."
-      );
+          this->get_logger(),
+          *this->get_clock(),
+          1000,
+          "Waiting for odometry...");
       publishStop();
       return;
     }
 
-    if ((this->now() - last_path_time_).seconds() > path_timeout_sec_) {
+    if (!have_path_)
+    {
       RCLCPP_WARN_THROTTLE(
-        this->get_logger(),
-        *this->get_clock(),
-        1000,
-        "Path is stale; stopping."
-      );
+          this->get_logger(),
+          *this->get_clock(),
+          1000,
+          "Waiting for path...");
+      publishStop();
+      return;
+    }
+
+    if ((this->now() - last_path_time_).seconds() > path_timeout_sec_)
+    {
+      RCLCPP_WARN_THROTTLE(
+          this->get_logger(),
+          *this->get_clock(),
+          1000,
+          "Path is stale; stopping.");
       have_path_ = false;
-      publishStop();
-      return;
-    }
-
-    if (!have_path_) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(),
-        *this->get_clock(),
-        1000,
-        "Waiting for path..."
-      );
       publishStop();
       return;
     }
@@ -304,7 +304,8 @@ private:
 
     geometry_msgs::msg::Point lookahead_point;
 
-    if (!findLookaheadPoint(lookahead_point)) {
+    if (!findLookaheadPoint(lookahead_point))
+    {
       publishStop();
       return;
     }
@@ -315,23 +316,16 @@ private:
     const double steering_fraction = std::abs(steering_angle) / std::max(max_steering_angle_, 1e-6);
     const double speed_scale = clamp(1.0 - 0.5 * steering_fraction, 0.35, 1.0);
 
-    const double desired_speed = clamp(
-      target_speed_ * speed_scale,
-      min_speed_,
-      max_speed_
-    );
-    const double accel_cmd = pidControl(desired_speed, dt);
-
     // ease speed down as we approach the end of the path (the follow point)
-    const auto & goal = latest_path_.poses.back().pose.position;
+    const auto &goal = latest_path_.poses.back().pose.position;
     const double dist_to_goal = distance(x_curr_, y_curr_, goal.x, goal.y);
     const double approach_scale = clamp(dist_to_goal / std::max(lookahead_distance_, 1e-6), 0.0, 1.0);
 
     const double desired_speed = clamp(
-      target_speed_ * speed_scale * approach_scale,
-      min_speed_,
-      max_speed_
-    );
+        target_speed_ * speed_scale * approach_scale,
+        min_speed_,
+        max_speed_);
+    const double accel_cmd = pidControl(desired_speed, dt);
 
     ackermann_msgs::msg::AckermannDriveStamped cmd;
     cmd.header.stamp = now;
@@ -344,13 +338,12 @@ private:
     drive_pub_->publish(cmd);
 
     RCLCPP_DEBUG(
-      this->get_logger(),
-      "steer=%.3f rad, desired_speed=%.3f m/s, current_speed=%.3f m/s, accel=%.3f",
-      steering_angle,
-      desired_speed,
-      current_speed_,
-      accel_cmd
-    );
+        this->get_logger(),
+        "steer=%.3f rad, desired_speed=%.3f m/s, current_speed=%.3f m/s, accel=%.3f",
+        steering_angle,
+        desired_speed,
+        current_speed_,
+        accel_cmd);
   }
 
   // ROS interfaces
@@ -401,13 +394,9 @@ private:
   double integral_error_ = 0.0;
   double previous_error_ = 0.0;
   bool have_previous_error_ = false;
-
-  // Timing
-  double control_rate_hz_;
-  rclcpp::Time last_time_;
 };
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<PurePursuit>());
