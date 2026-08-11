@@ -15,7 +15,7 @@ def generate_launch_description():
         "behavior_trees",
         "intercept_replanning.xml",
     )
-    default_map = os.path.join(package_share, "maps", "empty_sim.yaml")
+    default_map = os.path.join(package_share, "maps", "intercept_arena.yaml")
     map_yaml = LaunchConfiguration("map")
     use_sim_time = LaunchConfiguration("use_sim_time")
     common_parameters = [config, {"use_sim_time": use_sim_time}]

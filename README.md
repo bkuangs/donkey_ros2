@@ -11,8 +11,10 @@ Build a simulated Ackermann car that can:
 5. Replan through a known static map with Ackermann-feasible paths
 6. Follow those paths until the target is intercepted (or tracking becomes stale)
 
-The intended proof of concept is a bounded, known, textured Gazebo environment
-with one red target.
+The default scenario is a 12 m square arena with a high-contrast floor grid,
+distinct wall markers, four asymmetric obstacles, and a red 20 cm-radius ball
+moving at 0.4 m/s around a deterministic three-meter circle. A matching known
+occupancy map is loaded by Nav2.
 
 ## Architecture
 
@@ -101,6 +103,8 @@ ros2 launch robot_sim intercept.launch.py \
 
 - RGB and depth images are spatially aligned and use identical intrinsics
 - There is only one (red) target and no data association problem
+- The default red ball follows a deterministic circle and is not inserted into
+  the Nav2 costmap
 
 #### Estimation
 
@@ -110,6 +114,7 @@ ros2 launch robot_sim intercept.launch.py \
 #### Control
 
 - The known map is aligned with the vehicle's startup odometry origin
+- The default arena map has 0.1 m resolution and origin `[-6.5, -6.5, 0]`
 - Runs are short enough that VIO drift does not misalign `odom` and the known map
 - The target is not an obstacle inside the costmap
 - Nav2 Smac uses `DUBIN` motion with a 0.54 m minimum turning radius
@@ -128,6 +133,7 @@ ros2 launch robot_sim intercept.launch.py \
 | `ros2 run tf2_ros tf2_echo odom base_footprint` | One continuous transform chain |
 | `ros2 topic echo --once /perception/target_position` | Metric target measurement in `odom` |
 | `ros2 topic echo --once /tracking/target_state` | Filtered target position and velocity |
+| `ros2 topic echo --once /target/ground_truth/odom` | Ball ground truth for estimator evaluation |
 | `ros2 topic echo --once /navigation/intercept_pose` | Fresh reachable intercept pose |
 | `ros2 action list` | `/navigate_to_pose` is available |
 | `ros2 topic echo --once /cmd_vel` | Nav2 produces a command while navigating |
@@ -137,7 +143,7 @@ ros2 launch robot_sim intercept.launch.py \
 | Milestone | Deliverable | Status |
 | --- | --- | --- |
 | 0. Architecture | Coherent topics, frames, RGB-D projection, filtering, guidance, Nav2, and actuation wiring | Implemented; runtime verification pending |
-| 1. Simulation scenario | Textured world, moving red target, matching occupancy map, and target ground truth | Not started |
+| 1. Simulation scenario | Feature-rich world, moving red target, matching occupancy map, and target ground truth | Implemented; runtime verification pending |
 | 2. Ego localization | Repository-owned OpenVINS config with bounded pose error against ground truth | Not started |
 | 3. Target estimation | Validated RGB-D position and velocity error across representative ranges and motions | Not started |
 | 4. Static navigation | Smac/RPP reaches stationary poses without collisions or TF/controller conflicts | Not started |

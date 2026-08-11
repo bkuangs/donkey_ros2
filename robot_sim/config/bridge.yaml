@@ -22,6 +22,13 @@
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
+# Target ground truth for evaluating position, velocity, and interception.
+- ros_topic_name: "/target/ground_truth/odom"
+  gz_topic_name: "/target/ground_truth/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
 # Camera metadata
 - ros_topic_name: "/camera/camera_info"
   gz_topic_name: "/camera/camera_info"

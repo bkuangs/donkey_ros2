@@ -21,12 +21,12 @@ def generate_launch_description():
     default_world = PathJoinSubstitution([
         FindPackageShare("robot_sim"),
         "worlds",
-        "empty.sdf",
+        "intercept_arena.sdf",
     ])
     default_map = PathJoinSubstitution([
         FindPackageShare("robot_navigation"),
         "maps",
-        "empty_sim.yaml",
+        "intercept_arena.yaml",
     ])
 
     common = {"use_sim_time": use_sim_time}

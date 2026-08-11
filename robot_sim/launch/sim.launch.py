@@ -1,7 +1,12 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
+from launch.actions import (
+    AppendEnvironmentVariable,
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+)
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
@@ -20,8 +25,13 @@ def generate_launch_description():
     default_world = PathJoinSubstitution([
         FindPackageShare("robot_sim"),
         "worlds",
-        "empty.sdf",
+        "intercept_arena.sdf",
     ])
+
+    model_resource_path = AppendEnvironmentVariable(
+        "GZ_SIM_RESOURCE_PATH",
+        os.path.join(pkg_dir, "models"),
+    )
 
     xacro_file = PathJoinSubstitution([
         FindPackageShare("robot_sim"),
@@ -171,6 +181,7 @@ def generate_launch_description():
             default_value=default_world,
             description="SDF world file to load in Gazebo Sim",
         ),
+        model_resource_path,
         gazebo,
         robot_state_publisher,
         spawn_robot,

@@ -9,7 +9,7 @@ install(
 )
 
 install(
-  DIRECTORY launch config worlds urdf rviz
+  DIRECTORY launch config models worlds urdf rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
