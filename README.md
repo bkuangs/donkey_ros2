@@ -1,10 +1,11 @@
 # Target Interception Simulation
 
-This ROS 2 project demonstrates the estimation and control required for an
-Ackermann vehicle to intercept a moving target. The v0 system deliberately uses
-simulator ground truth for ego pose so that target projection, filtering,
+Estimation and control required for an Ackermann vehicle to intercept a moving target. 
+We begin by using simulator ground truth for ego pose so that target projection, filtering,
 intercept prediction, and terminal guidance can be validated without a
 localization or navigation stack in the critical path.
+
+<img src="trial_results/image.png" alt="Target interception trial" width="500">
 
 ## v0 Scope
 
