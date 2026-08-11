@@ -4,7 +4,10 @@ project(robot_sim)
 find_package(ament_cmake REQUIRED)
 
 install(
-  PROGRAMS scripts/cmd_vel_stamper.py
+  PROGRAMS
+    scripts/cmd_vel_stamper.py
+    scripts/run_trials.py
+    scripts/trial_evaluator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

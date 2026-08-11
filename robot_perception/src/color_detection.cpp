@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,20 @@ public:
     target_topic_ = this->declare_parameter<std::string>(
       "target_topic", "/perception/target_detection");
     min_contour_area_ = this->declare_parameter<double>("min_contour_area", 100.0);
+    minimum_saturation_ = this->declare_parameter<int>("minimum_saturation", 100);
+    minimum_value_ = this->declare_parameter<int>("minimum_value", 100);
+    low_red_maximum_hue_ = this->declare_parameter<int>("low_red_maximum_hue", 10);
+    high_red_minimum_hue_ = this->declare_parameter<int>("high_red_minimum_hue", 170);
+    if (
+      min_contour_area_ <= 0.0 ||
+      minimum_saturation_ < 0 || minimum_saturation_ > 255 ||
+      minimum_value_ < 0 || minimum_value_ > 255 ||
+      low_red_maximum_hue_ < 0 || low_red_maximum_hue_ > 180 ||
+      high_red_minimum_hue_ < 0 || high_red_minimum_hue_ > 180 ||
+      low_red_maximum_hue_ >= high_red_minimum_hue_)
+    {
+      throw std::invalid_argument("Invalid HSV target detector parameters.");
+    }
 
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
       "/camera/image_raw", rclcpp::SensorDataQoS(),
@@ -45,8 +60,16 @@ private:
     cv::Mat low_red;
     cv::Mat high_red;
     cv::Mat mask;
-    cv::inRange(hsv, cv::Scalar(0, 100, 100), cv::Scalar(10, 255, 255), low_red);
-    cv::inRange(hsv, cv::Scalar(170, 100, 100), cv::Scalar(180, 255, 255), high_red);
+    cv::inRange(
+      hsv,
+      cv::Scalar(0, minimum_saturation_, minimum_value_),
+      cv::Scalar(low_red_maximum_hue_, 255, 255),
+      low_red);
+    cv::inRange(
+      hsv,
+      cv::Scalar(high_red_minimum_hue_, minimum_saturation_, minimum_value_),
+      cv::Scalar(180, 255, 255),
+      high_red);
     mask = low_red | high_red;
     cv::erode(mask, mask, cv::Mat(), cv::Point(-1, -1), 2);
     cv::dilate(mask, mask, cv::Mat(), cv::Point(-1, -1), 2);
@@ -80,6 +103,10 @@ private:
 
   std::string target_topic_;
   double min_contour_area_;
+  int minimum_saturation_;
+  int minimum_value_;
+  int low_red_maximum_hue_;
+  int high_red_minimum_hue_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
   rclcpp::Publisher<robot_interfaces::msg::TargetDetection2D>::SharedPtr target_pub_;
 };
