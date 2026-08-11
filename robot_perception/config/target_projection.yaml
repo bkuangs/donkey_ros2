@@ -1,0 +1,21 @@
+color_detection:
+  ros__parameters:
+    target_topic: /perception/target_detection
+    min_contour_area: 100.0
+
+target_projector:
+  ros__parameters:
+    detection_topic: /perception/target_detection
+    depth_topic: /camera/depth_image
+    camera_info_topic: /camera/camera_info
+    output_topic: /perception/target_position
+    camera_frame: camera_optical_frame
+    output_frame: odom
+    min_depth: 0.1
+    max_depth: 20.0
+    sample_fraction: 0.5
+    depth_variance_base: 0.0025
+    depth_variance_scale: 0.001
+    pixel_variance: 1.0
+    sync_tolerance: 0.05
+    transform_timeout: 0.05

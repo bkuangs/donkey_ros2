@@ -1,0 +1,7 @@
+target_ekf:
+  ros__parameters:
+    measurement_topic: /perception/target_position
+    state_topic: /tracking/target_state
+    tracking_frame: odom
+    acceleration_variance: 2.0
+    default_measurement_variance: 0.04
