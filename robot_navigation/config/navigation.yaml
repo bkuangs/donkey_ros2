@@ -13,6 +13,6 @@ intercept_controller:
     slowdown_distance: 0.75
     capture_radius: 0.45
     max_intercept_time: 8.0
-    target_timeout: 0.2
+    target_timeout: 1.0
     odometry_timeout: 0.2
     control_rate: 20.0

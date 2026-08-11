@@ -1,7 +1,10 @@
 <?xml version="1.0" ?>
 <sdf version="1.9">
   <model name="red_ball">
+    <allow_auto_disable>false</allow_auto_disable>
     <link name="ball">
+      <!-- Floor contact overrides VelocityControl, so the scripted target is visual-only. -->
+      <gravity>false</gravity>
       <inertial>
         <mass>0.5</mass>
         <inertia>
@@ -10,21 +13,6 @@
           <izz>0.008</izz>
         </inertia>
       </inertial>
-      <collision name="collision">
-        <geometry>
-          <sphere>
-            <radius>0.2</radius>
-          </sphere>
-        </geometry>
-        <surface>
-          <friction>
-            <ode>
-              <mu>1.0</mu>
-              <mu2>1.0</mu2>
-            </ode>
-          </friction>
-        </surface>
-      </collision>
       <visual name="visual">
         <geometry>
           <sphere>
@@ -38,7 +26,6 @@
         </material>
       </visual>
     </link>
-
     <!-- v=0.4 m/s and yaw_rate=v/r=0.1333 rad/s produce a 3 m circle. -->
     <plugin
       filename="gz-sim-velocity-control-system"
