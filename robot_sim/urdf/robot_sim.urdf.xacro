@@ -3,7 +3,6 @@
 
   <xacro:include filename="$(find robot_description)/urdf/robot_car.urdf.xacro" />
   <xacro:include filename="$(find robot_sim)/urdf/sim_camera.xacro" />
-  <xacro:include filename="$(find robot_sim)/urdf/sim_imu.xacro" />
   <xacro:include filename="$(find robot_sim)/urdf/sim_ground_truth.xacro" />
   <xacro:include filename="$(find robot_sim)/urdf/ros2_control.xacro"/>
 

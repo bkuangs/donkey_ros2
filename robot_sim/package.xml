@@ -4,7 +4,7 @@
   <name>robot_sim</name>
   <version>0.0.0</version>
   <description>Gazebo simulation environment, launch files, bridges, and plugins for Robot Car</description>
-  <maintainer email="kuangbrian71@gmail.com">root</maintainer>
+  <maintainer email="kuangbrian71@gmail.com">bkuang</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -30,8 +30,6 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
 
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
   <test_depend>ament_cmake_pytest</test_depend>
 
   <export>

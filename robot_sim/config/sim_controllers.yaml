@@ -31,7 +31,7 @@ ackermann_steering_controller:
     # Frames
     odom_frame_id: odom
     base_frame_id: base_footprint
-    # robot_localization is the sole odom -> base_footprint TF publisher.
+    # The v0 application consumes simulator ground truth instead of wheel odometry.
     enable_odom_tf: false
 
     reference_timeout: 2.0

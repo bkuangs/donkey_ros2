@@ -5,8 +5,6 @@ We begin by using simulator ground truth for ego pose so that target projection,
 intercept prediction, and terminal guidance can be validated without a
 localization or navigation stack in the critical path.
 
-<img src="trial_results/image.png" alt="Target interception trial" width="500">
-
 ## v0 Scope
 
 The application consists of four nodes:
@@ -93,7 +91,8 @@ The v0 gate is:
 | Capture dwell | 0.2 s |
 | Trial timeout | 20 s |
 | Required successes | 8 of 10 |
-| Stale ego or target input | Zero command within 0.25 s |
+| Stale ego input | Zero command after 0.2 s |
+| Stale target input | Zero command after 1.0 s of bounded extrapolation |
 
 ## Safety and Control Limits
 

@@ -12,7 +12,6 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(image_transport REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -27,9 +26,7 @@ ament_target_dependencies(color_detection
   robot_interfaces
   rclcpp
   sensor_msgs
-  geometry_msgs
   cv_bridge
-  image_transport
 )
 
 target_link_libraries(color_detection
