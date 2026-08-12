@@ -5,6 +5,8 @@ We begin by using simulator ground truth for ego pose so that target projection,
 intercept prediction, and terminal guidance can be validated without a
 localization or navigation stack in the critical path.
 
+<img src="docs/assets/target-interception.png" alt="Target interception trial" width="500">
+
 ## v0 Scope
 
 The application consists of four nodes:
