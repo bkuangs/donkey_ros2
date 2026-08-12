@@ -5,3 +5,5 @@ target_ekf:
     tracking_frame: odom
     acceleration_variance: 2.0
     default_measurement_variance: 0.04
+    maximum_prediction_interval: 1.0
+    innovation_gate: 25.0

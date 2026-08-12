@@ -9,6 +9,7 @@ from launch.actions import (
 )
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.conditions import IfCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -18,6 +19,14 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
     world = LaunchConfiguration("world")
+    gz_args = LaunchConfiguration("gz_args")
+    robot_x = LaunchConfiguration("robot_x")
+    robot_y = LaunchConfiguration("robot_y")
+    robot_yaw = LaunchConfiguration("robot_yaw")
+    target_x = LaunchConfiguration("target_x")
+    target_y = LaunchConfiguration("target_y")
+    target_yaw = LaunchConfiguration("target_yaw")
+    use_rviz = LaunchConfiguration("rviz")
     
     pkg_dir = get_package_share_directory('robot_sim')
     bridge_yaml_path = os.path.join(pkg_dir, 'config', 'bridge.yaml')
@@ -38,6 +47,12 @@ def generate_launch_description():
         "urdf",
         "robot_sim.urdf.xacro",
     ])
+    target_model = PathJoinSubstitution([
+        FindPackageShare("robot_sim"),
+        "models",
+        "red_ball",
+        "model.sdf",
+    ])
 
     robot_description = {
         "robot_description": ParameterValue(
@@ -56,7 +71,7 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            "gz_args": ["-r ", world],
+            "gz_args": [gz_args, " ", world],
         }.items(),
     )
 
@@ -70,17 +85,33 @@ def generate_launch_description():
     spawn_robot = Node(
         package="ros_gz_sim",
         executable="create",
+        name="spawn_robot",
         arguments=[
             "-name", "robot_car",
             "-topic", "robot_description",
-            "-x", "0.0",
-            "-y", "0.0",
+            "-x", robot_x,
+            "-y", robot_y,
             "-z", "0.0",
+            "-Y", robot_yaw,
         ],
         output="screen",
     )
 
-    # --- Spawn controllers ---
+    spawn_target = Node(
+        package="ros_gz_sim",
+        executable="create",
+        name="spawn_target",
+        arguments=[
+            "-name", "red_ball",
+            "-file", target_model,
+            "-x", target_x,
+            "-y", target_y,
+            "-z", "0.2",
+            "-Y", target_yaw,
+        ],
+        output="screen",
+    )
+
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -167,6 +198,7 @@ def generate_launch_description():
         executable="rviz2",
         arguments=["-d", rviz_config],
         parameters=[{"use_sim_time": use_sim_time}],
+        condition=IfCondition(use_rviz),
         output="screen",
     )
 
@@ -181,16 +213,23 @@ def generate_launch_description():
             default_value=default_world,
             description="SDF world file to load in Gazebo Sim",
         ),
+        DeclareLaunchArgument("gz_args", default_value="-r"),
+        DeclareLaunchArgument("robot_x", default_value="0.0"),
+        DeclareLaunchArgument("robot_y", default_value="0.0"),
+        DeclareLaunchArgument("robot_yaw", default_value="0.0"),
+        DeclareLaunchArgument("target_x", default_value="3.0"),
+        DeclareLaunchArgument("target_y", default_value="0.0"),
+        DeclareLaunchArgument("target_yaw", default_value="1.57079632679"),
+        DeclareLaunchArgument("rviz", default_value="true"),
         model_resource_path,
         gazebo,
         robot_state_publisher,
         spawn_robot,
+        spawn_target,
         sensor_bridge,
         image_bridge,
         depth_bridge,
         cmd_vel_stamper,
-        
-        # Load the sequential event handlers instead of direct nodes
         load_joint_state_broadcaster,
         load_ackermann_controller,
         rviz,
