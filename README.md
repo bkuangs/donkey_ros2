@@ -1,15 +1,12 @@
 # Target Interception Simulation
 
-Estimation and control required for an Ackermann vehicle to intercept a moving target. 
-We begin by using simulator ground truth for ego pose so that target projection, filtering,
-intercept prediction, and terminal guidance can be validated without a
-localization or navigation stack in the critical path.
+ROS 2 simulation sandbox for moving object tracking and interception using an Ackermann-steered vehicle.  We begin by using ground truth for ego pose so that target projection, filtering, intercept prediction, and terminal guidance can be validated without a localization or navigation stack in the loop.
 
-<img src="docs/assets/target-interception.png" alt="Target interception trial" width="500">
+<img src="assets/target-interception.gif" alt="Target interception trial" width="500">
 
-## v0 Scope
+## Architecture
 
-The application consists of four nodes:
+For v0, we begin by using four nodes:
 
 ```text
 /camera/image_raw
@@ -29,14 +26,11 @@ The application consists of four nodes:
 | `robot_tracking` | Constant-velocity target Kalman filter |
 | `robot_navigation` | Intercept solve and direct Ackermann pursuit control |
 
-OpenVINS, Nav2, lifecycle managers, behavior trees, known maps, costmaps, and
-obstacles are intentionally outside v0.
-
 ## Scenario
 
-The vehicle starts inside a 12 m obstacle-free arena. A red ball moves at
-0.4 m/s on a 3 m circle. The RGB-D pipeline estimates the target in `odom`, and
-the controller repeatedly solves
+The vehicle starts in an empty 12x12m arena. A red ball moves at
+0.4m/s on a 3m circle. The RGB-D pipeline estimates the target in `odom`, and
+the controller repeatedly solves:
 
 ```text
 |p_target - p_robot + v_target t| = v_robot t
@@ -46,12 +40,15 @@ before steering toward the resulting intercept point. The constant-velocity
 filter is intentionally model-mismatched with circular motion; its lag is a
 measured limitation rather than hidden by using target truth.
 
-`/ground_truth/odom` is an intentional v0 input. Target truth at
-`/target/ground_truth/odom` is consumed only by the optional evaluator.
+### Control Limits
+
+The vehicle is forward-only and assumes the target is initially visible. Steering 
+is limited by the 0.24m wheelbase and 0.6rad steering limit; linear acceleration and
+deceleration are also bounded.
 
 ## Build and Run
 
-Use a ROS 2 Jazzy workspace:
+In ROS 2 Jazzy:
 
 ```bash
 rosdep install --from-paths src --ignore-src -r -y
@@ -69,9 +66,9 @@ ros2 launch robot_sim intercept.launch.py \
   target_x:=3.0 target_y:=0.0 target_yaw:=1.5708
 ```
 
-## Acceptance Trials
+### Random Trials
 
-Run the seeded ten-trial gate after building:
+To run ten seeded trials:
 
 ```bash
 ros2 run robot_sim run_trials.py \
@@ -85,25 +82,6 @@ aiming the forward camera toward the target. `trial_results/summary.json`
 contains each seed, minimum center distance, capture time, target-estimation
 RMSE, and termination reason.
 
-The v0 gate is:
-
-| Criterion | Value |
-| --- | --- |
-| Capture radius | 0.45 m center-to-center |
-| Capture dwell | 0.2 s |
-| Trial timeout | 20 s |
-| Required successes | 8 of 10 |
-| Stale ego input | Zero command after 0.2 s |
-| Stale target input | Zero command after 1.0 s of bounded extrapolation |
-
-## Safety and Control Limits
-
-The controller is forward-only and assumes the target is initially visible. It
-actively publishes a zero command when input is stale, the target is captured,
-or no intercept exists within the configured horizon. Curvature is limited by
-the 0.24 m wheelbase and 0.6 rad steering limit; linear acceleration and
-deceleration are also bounded.
-
 ## Roadmap
 
 | Version | Increment |
@@ -111,8 +89,16 @@ deceleration are also bounded.
 | v0 | Open-space interception using ego ground truth |
 | v1 | Obstacles and Nav2 for mid-course routing, with direct terminal pursuit |
 | v2 | Replace ego truth with measured odometry or deliberately chosen VIO |
-| v3 | Search, loss recovery, reset handling, and explicit mission states |
+| v3 | Search, loss recovery, reset handling, and explicit mission states |  
 
-See [`docs/implementation_plan.md`](docs/implementation_plan.md) for gates
-between layers and [`docs/unresolved.md`](docs/unresolved.md) for deferred
-decisions.
+
+#### Success criteria for v0:
+
+| Criteria | Value |
+| --- | --- |
+| Capture radius | 0.45 m center-to-center |
+| Capture dwell | 0.2 s |
+| Trial timeout | 20 s |
+| Required successes | 8 of 10 |
+| Stale ego input | Zero command after 0.2 s |
+| Stale target input | Zero command after 1.0 s of bounded extrapolation |
