@@ -12,17 +12,6 @@ enum class CommandOwner : uint8_t
   TERMINAL = 2,
 };
 
-inline bool isValidOwner(const uint8_t value)
-{
-  return value <= static_cast<uint8_t>(CommandOwner::TERMINAL);
-}
-
-inline bool ownerTransitionRequiresStop(
-  const CommandOwner current, const CommandOwner requested)
-{
-  return current != requested;
-}
-
 inline bool inputIsFresh(
   const bool received, const double age, const double timeout)
 {
@@ -50,16 +39,14 @@ inline bool updateTerminalState(
 }
 
 inline bool shouldRefreshGoal(
-  const bool goal_sent,
   const bool goal_active,
   const double elapsed,
   const double displacement,
   const double minimum_period,
   const double minimum_displacement)
 {
-  return !goal_sent ||
-         (elapsed >= minimum_period &&
-          (!goal_active || displacement >= minimum_displacement));
+  return elapsed >= minimum_period &&
+         (!goal_active || displacement >= minimum_displacement);
 }
 
 }  // namespace robot_navigation

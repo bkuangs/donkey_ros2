@@ -2,6 +2,7 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -77,6 +78,14 @@ public:
   }
 
 private:
+  enum class NavGoalState
+  {
+    IDLE,
+    REQUESTING,
+    ACTIVE,
+    CANCELLING,
+  };
+
   void odometryCallback(const nav_msgs::msg::Odometry::SharedPtr message)
   {
     if (message->header.frame_id != planning_frame_) {
@@ -115,42 +124,38 @@ private:
   void cancelNavigation(const robot_navigation::CommandOwner owner_after_cancel)
   {
     desired_owner_ = owner_after_cancel;
-    if (
-      !goal_request_pending_ && !cancel_in_progress_ &&
-      !nav_goal_outstanding_)
-    {
-      goal_sent_ = false;
+    if (nav_goal_state_ == NavGoalState::IDLE) {
+      last_goal_time_.reset();
       publishOwner(desired_owner_);
       return;
     }
     publishOwner(robot_navigation::CommandOwner::STOP);
-    if (goal_request_pending_ || cancel_in_progress_) {
+    if (
+      nav_goal_state_ != NavGoalState::ACTIVE ||
+      !navigate_client_->action_server_is_ready())
+    {
       return;
     }
-    if (!navigate_client_->action_server_is_ready()) {
-      return;
-    }
-    cancel_in_progress_ = true;
-    navigate_client_->async_cancel_all_goals(
-      [this](const action_msgs::srv::CancelGoal::Response::SharedPtr response) {
-        cancel_in_progress_ = false;
-        if (
-          !response ||
-          response->return_code != action_msgs::srv::CancelGoal::Response::ERROR_NONE)
+
+    nav_goal_state_ = NavGoalState::CANCELLING;
+    const auto goal_handle = goal_handle_;
+    navigate_client_->async_cancel_goal(
+      goal_handle,
+      [this, goal_handle](
+        const action_msgs::srv::CancelGoal::Response::SharedPtr response)
+      {
+        if (goal_handle != goal_handle_ ||
+          nav_goal_state_ != NavGoalState::CANCELLING)
         {
-          RCLCPP_WARN(this->get_logger(), "Nav2 goal cancellation was rejected.");
-          if (!nav_goal_outstanding_) {
-            goal_sent_ = false;
-            publishOwner(desired_owner_);
-          }
           return;
         }
-        ++goal_generation_;
-        nav_goal_outstanding_ = false;
-        goal_sent_ = false;
-        if (desired_owner_ != robot_navigation::CommandOwner::NAV2) {
-          publishOwner(desired_owner_);
+        if (response &&
+          response->return_code == action_msgs::srv::CancelGoal::Response::ERROR_NONE)
+        {
+          return;
         }
+        RCLCPP_WARN(this->get_logger(), "Nav2 goal cancellation was rejected.");
+        nav_goal_state_ = NavGoalState::ACTIVE;
       });
   }
 
@@ -168,39 +173,51 @@ private:
     goal.pose.pose.orientation.z = std::sin(0.5 * heading);
     goal.pose.pose.orientation.w = std::cos(0.5 * heading);
 
-    const uint64_t generation = ++goal_generation_;
+    nav_goal_state_ = NavGoalState::REQUESTING;
     rclcpp_action::Client<NavigateToPose>::SendGoalOptions options;
     options.goal_response_callback =
-      [this, generation](const GoalHandle::SharedPtr & goal_handle) {
-        if (generation == goal_request_generation_) {
-          goal_request_pending_ = false;
-        }
-        if (generation != goal_generation_) {
+      [this](const GoalHandle::SharedPtr & goal_handle) {
+        if (nav_goal_state_ != NavGoalState::REQUESTING) {
           return;
         }
-        nav_goal_outstanding_ = static_cast<bool>(goal_handle);
+        if (goal_handle) {
+          goal_handle_ = goal_handle;
+        } else {
+          RCLCPP_WARN(this->get_logger(), "Nav2 rejected the interception goal.");
+        }
+        nav_goal_state_ =
+          goal_handle_ ? NavGoalState::ACTIVE : NavGoalState::IDLE;
+
         if (desired_owner_ != robot_navigation::CommandOwner::NAV2) {
           cancelNavigation(desired_owner_);
           return;
         }
-        if (!goal_handle) {
-          RCLCPP_WARN(this->get_logger(), "Nav2 rejected the interception goal.");
-          publishOwner(robot_navigation::CommandOwner::STOP);
-          return;
-        }
-        publishOwner(robot_navigation::CommandOwner::NAV2);
+        publishOwner(
+          nav_goal_state_ == NavGoalState::ACTIVE ?
+          robot_navigation::CommandOwner::NAV2 :
+          robot_navigation::CommandOwner::STOP);
       };
     options.result_callback =
-      [this, generation](const GoalHandle::WrappedResult &) {
-        if (generation == goal_generation_) {
-          nav_goal_outstanding_ = false;
-          publishOwner(robot_navigation::CommandOwner::STOP);
+      [this](const GoalHandle::WrappedResult & result) {
+        if (!goal_handle_ || result.goal_id != goal_handle_->get_goal_id()) {
+          return;
         }
+
+        goal_handle_.reset();
+        if (nav_goal_state_ == NavGoalState::REQUESTING) {
+          // A rolling replacement may still be waiting for its goal response.
+          return;
+        }
+        const bool was_cancelling = nav_goal_state_ == NavGoalState::CANCELLING;
+        nav_goal_state_ = NavGoalState::IDLE;
+        if (was_cancelling) {
+          last_goal_time_.reset();
+        }
+        publishOwner(
+          desired_owner_ == robot_navigation::CommandOwner::NAV2 ?
+          robot_navigation::CommandOwner::STOP : desired_owner_);
       };
     navigate_client_->async_send_goal(goal, options);
-    goal_request_generation_ = generation;
-    goal_request_pending_ = true;
-    goal_sent_ = true;
     last_goal_x_ = goal_x;
     last_goal_y_ = goal_y;
     last_goal_time_ = now;
@@ -247,7 +264,11 @@ private:
     }
 
     desired_owner_ = robot_navigation::CommandOwner::NAV2;
-    if (cancel_in_progress_ || !navigate_client_->action_server_is_ready()) {
+    if (
+      (nav_goal_state_ != NavGoalState::IDLE &&
+      nav_goal_state_ != NavGoalState::ACTIVE) ||
+      !navigate_client_->action_server_is_ready())
+    {
       publishOwner(robot_navigation::CommandOwner::STOP);
       return;
     }
@@ -265,21 +286,20 @@ private:
       target_x + target_.twist.twist.linear.x * *intercept_time;
     const double goal_y =
       target_y + target_.twist.twist.linear.y * *intercept_time;
-    const double elapsed = goal_sent_ ? (now - last_goal_time_).seconds() : 0.0;
+    const double elapsed =
+      last_goal_time_ ? (now - *last_goal_time_).seconds() : 0.0;
     const double displacement = std::hypot(
       goal_x - last_goal_x_, goal_y - last_goal_y_);
-    if (
-      !goal_request_pending_ &&
-      robot_navigation::shouldRefreshGoal(
-        goal_sent_, nav_goal_outstanding_, elapsed, displacement,
+    if (!last_goal_time_ || robot_navigation::shouldRefreshGoal(
+        nav_goal_state_ == NavGoalState::ACTIVE, elapsed, displacement,
         goal_refresh_period_, goal_refresh_distance_))
     {
       sendGoal(goal_x, goal_y, now);
     }
     publishOwner(
-      goal_request_pending_ || !nav_goal_outstanding_ ?
-      robot_navigation::CommandOwner::STOP :
-      robot_navigation::CommandOwner::NAV2);
+      nav_goal_state_ == NavGoalState::ACTIVE ?
+      robot_navigation::CommandOwner::NAV2 :
+      robot_navigation::CommandOwner::STOP);
   }
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
@@ -289,7 +309,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   nav_msgs::msg::Odometry robot_;
   nav_msgs::msg::Odometry target_;
-  rclcpp::Time last_goal_time_;
+  std::optional<rclcpp::Time> last_goal_time_;
+  GoalHandle::SharedPtr goal_handle_;
   std::string odometry_topic_;
   std::string target_topic_;
   std::string owner_topic_;
@@ -299,6 +320,7 @@ private:
     robot_navigation::CommandOwner::TERMINAL;
   robot_navigation::CommandOwner desired_owner_ =
     robot_navigation::CommandOwner::STOP;
+  NavGoalState nav_goal_state_ = NavGoalState::IDLE;
   double intercept_speed_;
   double max_intercept_time_;
   double terminal_enter_distance_;
@@ -311,15 +333,9 @@ private:
   double control_rate_;
   double last_goal_x_ = 0.0;
   double last_goal_y_ = 0.0;
-  uint64_t goal_generation_ = 0;
-  uint64_t goal_request_generation_ = 0;
   bool have_robot_ = false;
   bool have_target_ = false;
   bool terminal_active_ = false;
-  bool goal_sent_ = false;
-  bool goal_request_pending_ = false;
-  bool nav_goal_outstanding_ = false;
-  bool cancel_in_progress_ = false;
 };
 
 int main(int argc, char ** argv)

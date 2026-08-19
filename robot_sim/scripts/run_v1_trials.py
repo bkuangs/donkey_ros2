@@ -4,10 +4,10 @@ import argparse
 import json
 import math
 import os
-import signal
-import subprocess
 import sys
 from pathlib import Path
+
+from trial_process import run_process as run_trial
 
 
 TARGET_RADIUS = 3.0
@@ -41,32 +41,6 @@ def scenario_geometry(scenario):
         "target_y": target_y,
         "target_yaw": target_yaw,
     }
-
-
-def run_trial(command, timeout, log_path, environment):
-    with log_path.open("w") as log:
-        process = subprocess.Popen(
-            command,
-            env=environment,
-            start_new_session=True,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-        )
-        try:
-            return_code = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=5.0)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait()
-            return_code = 124
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        return return_code
 
 
 def evaluate_gate(results, required_successes):

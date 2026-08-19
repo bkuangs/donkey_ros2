@@ -21,10 +21,6 @@ TEST(ControlLogic, RejectsMissingStaleAndFutureInputs)
 
 TEST(ControlLogic, ForwardsOnlyFreshOwnedCommands)
 {
-  EXPECT_TRUE(robot_navigation::ownerTransitionRequiresStop(
-      CommandOwner::NAV2, CommandOwner::TERMINAL));
-  EXPECT_FALSE(robot_navigation::ownerTransitionRequiresStop(
-      CommandOwner::NAV2, CommandOwner::NAV2));
   EXPECT_TRUE(robot_navigation::shouldForwardCommand(
       CommandOwner::NAV2, CommandOwner::NAV2, true, 0.1, 0.25));
   EXPECT_FALSE(robot_navigation::shouldForwardCommand(
@@ -37,14 +33,12 @@ TEST(ControlLogic, ForwardsOnlyFreshOwnedCommands)
 
 TEST(ControlLogic, RateLimitsGoalRefreshByTimeAndDisplacement)
 {
-  EXPECT_TRUE(robot_navigation::shouldRefreshGoal(
-      false, false, 0.0, 0.0, 1.0, 0.5));
   EXPECT_FALSE(robot_navigation::shouldRefreshGoal(
-      true, true, 0.9, 1.0, 1.0, 0.5));
+      true, 0.9, 1.0, 1.0, 0.5));
   EXPECT_FALSE(robot_navigation::shouldRefreshGoal(
-      true, true, 1.0, 0.49, 1.0, 0.5));
+      true, 1.0, 0.49, 1.0, 0.5));
   EXPECT_TRUE(robot_navigation::shouldRefreshGoal(
-      true, true, 1.0, 0.5, 1.0, 0.5));
+      true, 1.0, 0.5, 1.0, 0.5));
   EXPECT_TRUE(robot_navigation::shouldRefreshGoal(
-      true, false, 1.0, 0.0, 1.0, 0.5));
+      false, 1.0, 0.0, 1.0, 0.5));
 }

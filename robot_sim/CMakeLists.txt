@@ -15,6 +15,13 @@ install(
 )
 
 install(
+  FILES
+    scripts/trial_evaluation.py
+    scripts/trial_process.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   DIRECTORY launch config models worlds urdf rviz
   DESTINATION share/${PROJECT_NAME}
 )
@@ -30,8 +37,8 @@ if(BUILD_TESTING)
     test/test_v1_obstacles.py
   )
   ament_add_pytest_test(
-    v1_integration_contracts_test
-    test/test_v1_integration_contracts.py
+    trial_helpers_test
+    test/test_trial_helpers.py
   )
 endif()
 

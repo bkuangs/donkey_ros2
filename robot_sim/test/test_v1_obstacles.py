@@ -169,8 +169,12 @@ def test_v1_gate_requires_eight_captures_and_zero_contacts():
     ]
     assert evaluate_gate(results, 8) == (8, 0, True, True)
 
-    results[-1]["obstacle_contact_count"] = 1
-    assert evaluate_gate(results, 8) == (8, 1, True, False)
-
     results[-1]["collision_data_complete"] = False
+    assert evaluate_gate(results, 8) == (8, 0, False, False)
+
+    results[-1]["obstacle_contact_count"] = 1
     assert evaluate_gate(results, 8) == (8, 1, False, False)
+
+    results[7]["captured"] = False
+    results[-1]["collision_data_complete"] = True
+    assert evaluate_gate(results, 8) == (7, 1, True, False)

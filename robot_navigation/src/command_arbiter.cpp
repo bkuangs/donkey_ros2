@@ -66,7 +66,7 @@ private:
 
   void ownerCallback(const std_msgs::msg::UInt8::SharedPtr message)
   {
-    if (!robot_navigation::isValidOwner(message->data)) {
+    if (message->data > static_cast<uint8_t>(robot_navigation::CommandOwner::TERMINAL)) {
       RCLCPP_WARN(
         this->get_logger(), "Ignoring invalid command owner value %u.",
         static_cast<unsigned int>(message->data));
@@ -74,7 +74,7 @@ private:
     }
 
     const auto requested = static_cast<robot_navigation::CommandOwner>(message->data);
-    if (robot_navigation::ownerTransitionRequiresStop(owner_, requested)) {
+    if (owner_ != requested) {
       publishStop();
       owner_ = requested;
     }
