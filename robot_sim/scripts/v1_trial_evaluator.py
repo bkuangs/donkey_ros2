@@ -21,6 +21,7 @@ from trial_evaluation import (
     LocalizationErrors,
     PlanarTransform,
     TrackingErrors,
+    localization_is_ready,
     stamp_seconds,
     write_result,
     yaw_from_quaternion,
@@ -267,7 +268,14 @@ class V1TrialEvaluator(Node):
         if self.finished:
             return
         if time.monotonic() - self.started_at > 30.0 and self.first_stamp is None:
-            self.finish(False, "truth_timeout", 0.0)
+            reason = (
+                "localization_startup_timeout"
+                if self.evaluate_localization
+                and self.ego is not None
+                and self.target is not None
+                else "truth_timeout"
+            )
+            self.finish(False, reason, 0.0)
             return
         if self.ego is None or self.target is None:
             return
@@ -278,6 +286,12 @@ class V1TrialEvaluator(Node):
             return
         current_stamp = max(ego_stamp, target_stamp)
         if self.first_stamp is None:
+            if self.evaluate_localization and not localization_is_ready(
+                ego_stamp,
+                self.measured_ego,
+                self.sync_tolerance,
+            ):
+                return
             self.first_stamp = current_stamp
 
         elapsed = current_stamp - self.first_stamp

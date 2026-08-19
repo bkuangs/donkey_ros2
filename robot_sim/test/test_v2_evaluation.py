@@ -15,6 +15,7 @@ from trial_evaluation import (
     LocalizationErrors,
     PlanarTransform,
     TrackingErrors,
+    localization_is_ready,
     normalize_yaw,
 )
 
@@ -51,6 +52,15 @@ def _passing_result(captured=True):
         "ego_final_position_error": 0.15,
         "localization_availability": 0.98,
     }
+
+
+def test_localization_readiness_requires_a_fresh_measurement():
+    measured = SimpleNamespace(
+        header=SimpleNamespace(stamp=SimpleNamespace(sec=4, nanosec=0))
+    )
+    assert localization_is_ready(4.05, measured, 0.1) is True
+    assert localization_is_ready(4.11, measured, 0.1) is False
+    assert localization_is_ready(4.0, None, 0.1) is False
 
 
 def test_planar_transform_maps_pose_yaw_and_velocity():

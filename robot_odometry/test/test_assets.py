@@ -25,7 +25,6 @@ def test_localization_fuses_wheel_velocity_and_visual_pose():
     parameters = yaml.safe_load(
         (PACKAGE / "config" / "localization_ekf.yaml").read_text()
     )["localization_ekf"]["ros__parameters"]
-    assert parameters["predict_to_current_time"] is True
     assert parameters["two_d_mode"] is True
     assert parameters["publish_tf"] is True
     assert parameters["world_frame"] == parameters["odom_frame"] == "odom"

@@ -166,7 +166,8 @@ position RMSE at most 0.20 m, yaw RMSE at most 0.15 rad, final position error at
 most 0.30 m, and localization availability of at least 95% in every trial.
 Availability measures how often truth evaluation timestamps have a sufficiently
 fresh odometry sample; truth is evaluator-only. Each trial runs in a fresh
-process, and timestamp regressions or missing localization data fail the gate.
+process, begins scoring after the first fresh localization sample, and fails on
+later freshness loss, timestamp regressions, or missing localization data.
 ROS/Gazebo results must still be collected on a Jazzy system with RTAB-Map.
 
 ## Roadmap

@@ -35,6 +35,12 @@ def stamp_seconds(message):
     return message.header.stamp.sec + 1.0e-9 * message.header.stamp.nanosec
 
 
+def localization_is_ready(truth_stamp, measured, tolerance):
+    return measured is not None and abs(
+        truth_stamp - stamp_seconds(measured)
+    ) <= tolerance
+
+
 def yaw_from_quaternion(orientation):
     sin_yaw = 2.0 * (
         orientation.w * orientation.z + orientation.x * orientation.y
