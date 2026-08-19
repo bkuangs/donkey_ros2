@@ -18,6 +18,8 @@ def test_odometry_configuration():
     assert parameters["approx_sync"] is True
     assert parameters["qos"] == parameters["qos_camera_info"] == 2
     assert parameters["Vis/MinInliers"] == "10"
+    assert parameters["Reg/Force3DoF"] == "true"
+    assert parameters["Odom/GuessMotion"] == "false"
 
 
 def test_manifest_runtime_dependencies():
