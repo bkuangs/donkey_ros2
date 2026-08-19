@@ -29,7 +29,7 @@ def test_localization_fuses_wheel_velocity_and_visual_pose():
     assert parameters["publish_tf"] is True
     assert parameters["world_frame"] == parameters["odom_frame"] == "odom"
     assert parameters["base_link_frame"] == "base_footprint"
-    assert parameters["odom0"] == "/ackermann_steering_controller/odometry"
+    assert parameters["odom0"] == "/odom"
     assert parameters["odom0_config"] == [
         False, False, False,
         False, False, False,

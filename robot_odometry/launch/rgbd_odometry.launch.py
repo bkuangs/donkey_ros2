@@ -39,7 +39,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "wheel_odom_topic",
-                default_value="/ackermann_steering_controller/odometry",
+                default_value="/odom",
             ),
             DeclareLaunchArgument(
                 "odom_topic", default_value="/localization/odom"

@@ -59,7 +59,7 @@ v2 replaces application use of ego truth with fused measured odometry:
 /camera/image_raw + /camera/depth_image + /camera/camera_info
                          -> rgbd_odometry -> /localization/visual_odom
                                                             |
-/ackermann_steering_controller/odometry ------> localization_ekf
+/odom (wheel encoders) ------------------------> localization_ekf
                                                             |
                                              /localization/odom
                                              + odom -> base_footprint

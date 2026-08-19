@@ -12,7 +12,7 @@ localization_ekf:
 
     # Wheel odometry supplies continuous planar velocity without duplicating its
     # encoder-derived pose.
-    odom0: /ackermann_steering_controller/odometry
+    odom0: /odom
     odom0_config: [false, false, false,
                    false, false, false,
                    true,  true,  false,
