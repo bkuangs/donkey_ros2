@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 SCRIPTS = Path(__file__).parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+PACKAGE = Path(__file__).parents[1]
 
 from run_v1_trials import V1_SCENARIOS, run_scenarios
 from run_v2_trials import evaluate_v2_gate
@@ -61,6 +62,11 @@ def test_localization_readiness_requires_a_fresh_measurement():
     assert localization_is_ready(4.05, measured, 0.1) is True
     assert localization_is_ready(4.11, measured, 0.1) is False
     assert localization_is_ready(4.0, None, 0.1) is False
+
+
+def test_v2_trial_forwards_required_output_path():
+    launch = (PACKAGE / "launch" / "v2_trial.launch.py").read_text()
+    assert '"output_path": LaunchConfiguration("output_path")' in launch
 
 
 def test_planar_transform_maps_pose_yaw_and_velocity():

@@ -46,6 +46,7 @@ def scenario_geometry(scenario):
 
 def evaluate_gate(results, required_successes):
     successes = sum(bool(result.get("captured")) for result in results)
+    complete_trial_set = len(results) == len(V1_SCENARIOS)
     contact_data_complete = all(
         result.get("collision_data_complete") is True for result in results
     )
@@ -53,11 +54,18 @@ def evaluate_gate(results, required_successes):
         result.get("obstacle_contact_count", 0) for result in results
     )
     passed = (
-        successes >= required_successes
+        complete_trial_set
+        and successes >= required_successes
         and obstacle_contacts == 0
         and contact_data_complete
     )
-    return successes, obstacle_contacts, contact_data_complete, passed
+    return (
+        successes,
+        obstacle_contacts,
+        complete_trial_set,
+        contact_data_complete,
+        passed,
+    )
 
 
 def run_scenarios(
@@ -165,6 +173,7 @@ def main():
     (
         successes,
         obstacle_contacts,
+        complete_trial_set,
         contact_data_complete,
         passed,
     ) = evaluate_gate(
@@ -179,6 +188,7 @@ def main():
         "process_timeout_seconds": arguments.timeout,
         "successes": successes,
         "obstacle_contacts": obstacle_contacts,
+        "complete_trial_set": complete_trial_set,
         "contact_data_complete": contact_data_complete,
         "passed": passed,
         "results": results,

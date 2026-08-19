@@ -144,13 +144,13 @@ ros2 run robot_sim run_v1_trials.py \
   --output-dir v1_trial_results
 ```
 
-The proposed completion gate is at least 8 captures across the 10 deterministic
+The completion gate is at least 8 captures across the 10 deterministic
 scenarios, zero fixed-obstacle contacts, complete collision samples for every
 trial, and bounded per-trial/process timeouts. The runner writes per-trial logs
 and JSON plus `summary.json`, including initial conditions, termination reason,
 capture and contact counts, clearances, owner transitions, and estimation
-errors. The implementation and static contracts are validated in this
-repository; no ROS/Gazebo gate result is recorded here.
+errors. On ROS 2 Jazzy, v1 captured the target in all 10 scenarios without
+reported obstacle contacts.
 
 ### v2 trial gate
 
@@ -168,7 +168,13 @@ Availability measures how often truth evaluation timestamps have a sufficiently
 fresh odometry sample; truth is evaluator-only. Each trial runs in a fresh
 process, begins scoring after the first fresh localization sample, and fails on
 later freshness loss, timestamp regressions, or missing localization data.
-ROS/Gazebo results must still be collected on a Jazzy system with RTAB-Map.
+
+The 2026-08-19 Jazzy/QEMU run captured in 8 of 10 scenarios with zero observed
+contacts. One trial timed out and one exceeded the process timeout, leaving
+localization data incomplete. Across completed trials, position RMSE ranged from
+0.158 m to 0.403 m, yaw RMSE from 0.072 rad to 0.324 rad, final position error
+from 0.072 m to 0.650 m, and availability from 91.8% to 99.5%. The v2
+localization gate therefore remains open.
 
 ## Roadmap
 
@@ -176,7 +182,7 @@ ROS/Gazebo results must still be collected on a Jazzy system with RTAB-Map.
 | --- | --- |
 | v0 | Open-space interception using ego ground truth |
 | v1 | Obstacles and Nav2 for mid-course routing, with direct terminal pursuit |
-| v2 | RGB-D ego odometry with known initial map alignment |
+| v2 | Fused wheel/RGB-D ego odometry with known initial map alignment |
 | v3 | Search, loss recovery, reset handling, and explicit mission states |  
 
 

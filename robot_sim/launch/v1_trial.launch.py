@@ -25,6 +25,9 @@ def generate_launch_description():
     target_x = LaunchConfiguration("target_x")
     target_y = LaunchConfiguration("target_y")
     target_yaw = LaunchConfiguration("target_yaw")
+    intercept_launch = LaunchConfiguration("intercept_launch")
+    evaluate_localization = LaunchConfiguration("evaluate_localization")
+    measured_ego_topic = LaunchConfiguration("measured_ego_topic")
     mode_topic = LaunchConfiguration("mode_topic")
     trial_timeout = LaunchConfiguration("trial_timeout")
 
@@ -33,7 +36,7 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare("robot_sim"),
                 "launch",
-                "v1_intercept.launch.py",
+                intercept_launch,
             ])
         ),
         launch_arguments={
@@ -60,13 +63,24 @@ def generate_launch_description():
             "capture_radius": 0.45,
             "capture_dwell": 0.2,
             "trial_timeout": ParameterValue(trial_timeout, value_type=float),
+            "evaluate_localization": ParameterValue(
+                evaluate_localization,
+                value_type=bool,
+            ),
+            "measured_ego_topic": ParameterValue(
+                measured_ego_topic,
+                value_type=str,
+            ),
+            "initial_x": ParameterValue(robot_x, value_type=float),
+            "initial_y": ParameterValue(robot_y, value_type=float),
+            "initial_yaw": ParameterValue(robot_yaw, value_type=float),
         }],
         output="screen",
     )
     stop_when_finished = RegisterEventHandler(
         OnProcessExit(
             target_action=evaluator,
-            on_exit=[EmitEvent(event=Shutdown(reason="v1 trial finished"))],
+            on_exit=[EmitEvent(event=Shutdown(reason="trial finished"))],
         )
     )
 
@@ -82,6 +96,15 @@ def generate_launch_description():
         DeclareLaunchArgument("target_y", default_value="0.0"),
         DeclareLaunchArgument("target_yaw", default_value="1.57079632679"),
         DeclareLaunchArgument("trial_timeout", default_value="45.0"),
+        DeclareLaunchArgument(
+            "intercept_launch",
+            default_value="v1_intercept.launch.py",
+        ),
+        DeclareLaunchArgument("evaluate_localization", default_value="false"),
+        DeclareLaunchArgument(
+            "measured_ego_topic",
+            default_value="/localization/odom",
+        ),
         DeclareLaunchArgument(
             "mode_topic",
             default_value="/navigation/cmd_vel_owner",

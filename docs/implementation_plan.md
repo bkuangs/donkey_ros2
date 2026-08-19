@@ -46,12 +46,11 @@ ros2 launch robot_sim v1_intercept.launch.py
 ros2 run robot_sim run_v1_trials.py --trials 10 --required-successes 8
 ```
 
-The proposed completion gate is at least 8 captures in the 10 deterministic
+The completion gate is at least 8 captures in the 10 deterministic
 visible-target scenarios, zero fixed-obstacle contacts, complete collision data
 for every trial, and bounded trial/process timeouts. The map/world/launch
-contracts and pure helpers are statically tested. Actual ROS/Gazebo gate results
-are not recorded until that environment is available and the command above is
-run successfully.
+contracts and pure helpers are statically tested. The Jazzy gate completed with
+10 captures and no reported obstacle contacts.
 
 ## v2: Measured Ego Localization
 
@@ -79,8 +78,14 @@ captures, zero obstacle contacts, complete collision/localization data, position
 RMSE no greater than 0.20 m, yaw RMSE no greater than 0.15 rad, final position
 error no greater than 0.30 m, and localization availability of at least 95% in
 every trial. Trials use fresh processes; timestamp regressions and missing
-localization fail closed. ROS/Gazebo results are not recorded until this gate is
-run on a Jazzy system with RTAB-Map.
+localization fail closed.
+
+The 2026-08-19 Jazzy/QEMU gate captured 8 of 10 scenarios with zero observed
+contacts, but did not pass. One trial timed out, one hit the process timeout, and
+the completed runs exposed inconsistent fused localization: position RMSE
+reached 0.403 m, yaw RMSE reached 0.324 rad, final position error reached
+0.650 m, and minimum availability was 91.8%. Raw wheel and raw visual odometry
+should be evaluated independently before further fusion tuning.
 
 ## v3: Resilience
 

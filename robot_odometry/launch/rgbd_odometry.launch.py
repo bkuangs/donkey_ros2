@@ -14,7 +14,6 @@ def generate_launch_description():
     rgb_topic = LaunchConfiguration("rgb_topic")
     depth_topic = LaunchConfiguration("depth_topic")
     camera_info_topic = LaunchConfiguration("camera_info_topic")
-    wheel_odom_topic = LaunchConfiguration("wheel_odom_topic")
     odom_topic = LaunchConfiguration("odom_topic")
     use_sim_time_parameter = ParameterValue(use_sim_time, value_type=bool)
 
@@ -36,10 +35,6 @@ def generate_launch_description():
             DeclareLaunchArgument("depth_topic", default_value="/camera/depth_image"),
             DeclareLaunchArgument(
                 "camera_info_topic", default_value="/camera/camera_info"
-            ),
-            DeclareLaunchArgument(
-                "wheel_odom_topic",
-                default_value="/odom",
             ),
             DeclareLaunchArgument(
                 "odom_topic", default_value="/localization/odom"
@@ -64,10 +59,7 @@ def generate_launch_description():
                 output="screen",
                 parameters=[
                     ekf_config,
-                    {
-                        "use_sim_time": use_sim_time_parameter,
-                        "odom0": wheel_odom_topic,
-                    },
+                    {"use_sim_time": use_sim_time_parameter},
                 ],
                 remappings=[("odometry/filtered", odom_topic)],
             ),
