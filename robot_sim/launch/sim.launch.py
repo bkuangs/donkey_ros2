@@ -160,6 +160,16 @@ def generate_launch_description():
         output="screen",
     )
 
+    camera_info_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="camera_info_bridge",
+        arguments=[
+            "/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"
+        ],
+        output="screen",
+    )
+
     cmd_vel_stamper = Node(
         package="robot_sim",
         executable="cmd_vel_stamper.py",
@@ -231,6 +241,7 @@ def generate_launch_description():
         sensor_bridge,
         image_bridge,
         depth_bridge,
+        camera_info_bridge,
         cmd_vel_stamper,
         load_joint_state_broadcaster,
         load_ackermann_controller,
