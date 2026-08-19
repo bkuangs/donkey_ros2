@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 
+from trial_evaluation import write_result
 from trial_process import run_process as run_trial
 
 
@@ -106,14 +107,15 @@ def run_scenarios(
         if result_path.exists():
             result = json.loads(result_path.read_text())
         else:
+            reason = "process_timeout" if return_code == 124 else "launch_failure"
             result = {
                 "version": version,
                 "seed": geometry["seed"],
                 "scenario": geometry["name"],
                 "success": False,
                 "captured": False,
-                "reason": "launch_failure",
-                "termination_reason": "launch_failure",
+                "reason": reason,
+                "termination_reason": reason,
                 "return_code": return_code,
                 "collision_data_complete": False,
             }
@@ -126,6 +128,7 @@ def run_scenarios(
             for key, value in geometry.items()
             if key not in ("name", "seed")
         }
+        write_result(result_path, result)
         results.append(result)
         print(
             f"[{index + 1}/{arguments.trials}] "

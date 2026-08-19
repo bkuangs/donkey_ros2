@@ -8,7 +8,12 @@ from pathlib import Path
 import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import (
+    DurabilityPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
 from std_msgs.msg import UInt8
 
 from trial_evaluation import (
@@ -121,7 +126,7 @@ class V1TrialEvaluator(Node):
                 Odometry,
                 self.get_parameter("measured_ego_topic").value,
                 self.measured_ego_callback,
-                10,
+                qos_profile_sensor_data,
             )
         self.create_subscription(
             Odometry,

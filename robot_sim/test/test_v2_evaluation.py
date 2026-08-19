@@ -1,13 +1,15 @@
+import json
 import math
 from pathlib import Path
 import sys
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 SCRIPTS = Path(__file__).parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from run_v1_trials import V1_SCENARIOS
+from run_v1_trials import V1_SCENARIOS, run_scenarios
 from run_v2_trials import evaluate_v2_gate
 from trial_evaluation import (
     LocalizationErrors,
@@ -122,3 +124,19 @@ def test_v2_gate_rejects_partial_trial_sets():
     assert gate["captures"] == 8
     assert gate["complete_trial_set"] is False
     assert gate["passed"] is False
+
+
+def test_runner_persists_process_timeout(tmp_path):
+    arguments = SimpleNamespace(
+        output_dir=tmp_path,
+        trials=1,
+        timeout=150.0,
+        trial_timeout=45.0,
+        mode_topic="/navigation/cmd_vel_owner",
+    )
+    with patch("run_v1_trials.run_trial", return_value=124):
+        result = run_scenarios(arguments, version=2)[0]
+
+    assert result["reason"] == "process_timeout"
+    assert result["return_code"] == 124
+    assert json.loads((tmp_path / "trial_01.json").read_text()) == result
