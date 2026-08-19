@@ -145,6 +145,7 @@ def generate_launch_description():
     image_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
+        name="rgb_image_bridge",
         arguments=["/camera/image_raw"],
         parameters=[{"qos": "sensor_data"}],
         output="screen",
@@ -153,6 +154,7 @@ def generate_launch_description():
     depth_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
+        name="depth_image_bridge",
         arguments=["/camera/depth_image"],
         parameters=[{"qos": "sensor_data"}],
         output="screen",
