@@ -1,0 +1,20 @@
+rgbd_odometry:
+  ros__parameters:
+    frame_id: base_footprint
+    odom_frame_id: odom
+    publish_tf: false
+    subscribe_rgbd: false
+
+    approx_sync: true
+    # Bound pairing to half of a 30 Hz frame period so adjacent frames cannot match.
+    approx_sync_max_interval: 0.016
+    topic_queue_size: 10
+    sync_queue_size: 10
+
+    # RTAB-Map uses rmw reliability enum values: 2 selects sensor-data best effort.
+    qos: 2
+    qos_camera_info: 2
+
+    # The deterministic arena yields 36-43 matches but typically 10-17 inliers.
+    "Vis/MinInliers": "10"
+    "Reg/Force3DoF": "true"

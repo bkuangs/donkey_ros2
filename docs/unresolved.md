@@ -4,9 +4,8 @@
 | --- | --- | --- |
 | v0 tuning | Final capture/control gains | Start with 0.45 m capture radius, 1.0 m/s maximum speed, and repository defaults; tune only from recorded trials |
 | v0 evaluation | Circular-model mismatch | Report position and velocity RMSE; do not hide lag by consuming target truth |
-| v1 control | Nav2-to-terminal switch condition | Choose from measured distance, target-state age, and path feasibility after v0 data exists |
-| v1 arbitration | Command ownership | Add a single explicit mux/owner; never rely on publisher timing |
-| v2 localization | RGB-D odometry or monocular VIO | Prefer RGB-D for delivery robustness; choose monocular VIO only as a deliberate observability experiment |
-| v2 resets | Discontinuity threshold and recovery | Define from localization error data before integration |
+| v1 runtime validation | Completion gate result | Passed on Jazzy with 10 of 10 captures and no reported obstacle contacts |
+| v2 runtime validation | Completion gate result | The 2026-08-19 Jazzy/QEMU run captured 8 of 10 with zero observed contacts, but failed completeness and localization thresholds; isolate raw wheel and visual odometry before tuning fusion |
+| v2 resets | In-process recovery | Trials fail closed on timestamp regression and use a fresh process; autonomous recovery remains deferred to v3 |
 | v3 search | Forward-only search behavior | Deferred because v0 trials start with the target in view |
 | v3 target model | Coordinated-turn filter | Add only after quantifying constant-velocity lag on the circular target |

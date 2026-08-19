@@ -17,7 +17,10 @@ def generate_launch_description():
         Node(
             package='robot_navigation',
             executable='intercept_controller',
-            parameters=[config, {'use_sim_time': use_sim_time}],
+            parameters=[
+                config,
+                {'command_topic': '/cmd_vel', 'use_sim_time': use_sim_time},
+            ],
             output='screen',
         ),
     ])

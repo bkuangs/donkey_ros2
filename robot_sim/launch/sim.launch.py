@@ -145,6 +145,7 @@ def generate_launch_description():
     image_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
+        name="rgb_image_bridge",
         arguments=["/camera/image_raw"],
         parameters=[{"qos": "sensor_data"}],
         output="screen",
@@ -153,8 +154,19 @@ def generate_launch_description():
     depth_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
+        name="depth_image_bridge",
         arguments=["/camera/depth_image"],
         parameters=[{"qos": "sensor_data"}],
+        output="screen",
+    )
+
+    camera_info_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="camera_info_bridge",
+        arguments=[
+            "/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"
+        ],
         output="screen",
     )
 
@@ -229,6 +241,7 @@ def generate_launch_description():
         sensor_bridge,
         image_bridge,
         depth_bridge,
+        camera_info_bridge,
         cmd_vel_stamper,
         load_joint_state_broadcaster,
         load_ackermann_controller,

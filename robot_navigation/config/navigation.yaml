@@ -2,7 +2,7 @@ intercept_controller:
   ros__parameters:
     odometry_topic: /ground_truth/odom
     target_topic: /tracking/target_state
-    command_topic: /cmd_vel
+    command_topic: /cmd_vel/terminal
     planning_frame: odom
     maximum_speed: 1.0
     minimum_speed: 0.15
@@ -16,3 +16,33 @@ intercept_controller:
     target_timeout: 1.0
     odometry_timeout: 0.2
     control_rate: 20.0
+
+command_arbiter:
+  ros__parameters:
+    # Owner values on owner_topic: STOP=0, NAV2=1, TERMINAL=2.
+    owner_topic: /navigation/cmd_vel_owner
+    nav2_command_topic: /cmd_vel/nav2
+    terminal_command_topic: /cmd_vel/terminal
+    output_command_topic: /cmd_vel
+    command_timeout: 0.25
+    control_rate: 20.0
+
+interception_supervisor:
+  ros__parameters:
+    odometry_topic: /ground_truth/odom
+    target_topic: /tracking/target_state
+    owner_topic: /navigation/cmd_vel_owner
+    navigate_to_pose_action: /navigate_to_pose
+    planning_frame: odom
+    intercept_speed: 1.0
+    max_intercept_time: 8.0
+    # At enter=1.0, a robot chasing the 3 m orbit stays outside radius 2.0;
+    # its 0.216 m footprint radius remains clear of barriers ending at 1.578 m.
+    terminal_enter_distance: 1.0
+    terminal_exit_distance: 1.25
+    capture_radius: 0.45
+    target_timeout: 1.0
+    odometry_timeout: 0.2
+    goal_refresh_period: 1.0
+    goal_refresh_distance: 0.5
+    control_rate: 10.0

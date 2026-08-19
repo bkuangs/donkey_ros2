@@ -1,7 +1,11 @@
-/.DS_Store
+.DS_Store
 /.devcontainer
 /.vscode
 /build
 /install
 /log
 /trial_results
+/v1_trial_results
+/v2_trial_results
+__pycache__/
+*.py[cod]

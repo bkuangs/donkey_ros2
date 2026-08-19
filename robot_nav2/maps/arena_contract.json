@@ -1,0 +1,36 @@
+{
+  "frame": "map",
+  "resolution_m": 0.05,
+  "width_cells": 240,
+  "height_cells": 240,
+  "origin_xy_m": [-6.0, -6.0],
+  "arena_bounds_m": {
+    "x": [-6.0, 6.0],
+    "y": [-6.0, 6.0]
+  },
+  "occupied_boundary_thickness_m": 0.10,
+  "fixed_obstacles": [
+    {
+      "name": "chicane_barrier_a",
+      "x_m": [-1.025, -0.775],
+      "y_m": [-1.2, 1.2],
+      "z_m": [0.0, 0.12],
+      "sdf_center_xyz_m": [-0.9, 0.0, 0.06],
+      "sdf_size_xyz_m": [0.25, 2.4, 0.12]
+    },
+    {
+      "name": "chicane_barrier_b",
+      "x_m": [0.775, 1.025],
+      "y_m": [-1.2, 1.2],
+      "z_m": [0.0, 0.12],
+      "sdf_center_xyz_m": [0.9, 0.0, 0.06],
+      "sdf_size_xyz_m": [0.25, 2.4, 0.12]
+    }
+  ],
+  "protected_free_regions": {
+    "robot_start_x_m": [-2.5, -2.3],
+    "robot_start_y_m": [-0.5, 0.5],
+    "target_orbit_and_terminal_annulus_radius_m": [2.0, 3.35]
+  },
+  "rasterization": "A cell is occupied when it has positive-area overlap with a fixed obstacle."
+}

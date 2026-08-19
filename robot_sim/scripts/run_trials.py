@@ -5,10 +5,10 @@ import json
 import math
 import os
 import random
-import signal
-import subprocess
 import sys
 from pathlib import Path
+
+from trial_process import run_process as run_trial
 
 
 def trial_geometry(random_source):
@@ -21,32 +21,6 @@ def trial_geometry(random_source):
     robot_yaw = math.atan2(target_y - robot_y, target_x - robot_x)
     robot_yaw += random_source.uniform(-0.08, 0.08)
     return robot_x, robot_y, robot_yaw, target_x, target_y, target_yaw
-
-
-def run_trial(command, timeout, log_path, environment):
-    with log_path.open("w") as log:
-        process = subprocess.Popen(
-            command,
-            env=environment,
-            start_new_session=True,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-        )
-        try:
-            return_code = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=5.0)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait()
-            return_code = 124
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        return return_code
 
 
 def main():

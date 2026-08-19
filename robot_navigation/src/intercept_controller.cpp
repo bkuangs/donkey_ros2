@@ -21,7 +21,8 @@ public:
       "odometry_topic", "/ground_truth/odom");
     target_topic_ = this->declare_parameter<std::string>(
       "target_topic", "/tracking/target_state");
-    command_topic_ = this->declare_parameter<std::string>("command_topic", "/cmd_vel");
+    command_topic_ = this->declare_parameter<std::string>(
+      "command_topic", "/cmd_vel/terminal");
     planning_frame_ = this->declare_parameter<std::string>("planning_frame", "odom");
     maximum_speed_ = this->declare_parameter<double>("maximum_speed", 1.0);
     minimum_speed_ = this->declare_parameter<double>("minimum_speed", 0.15);
@@ -54,7 +55,7 @@ public:
     }
 
     odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      odometry_topic_, 10,
+      odometry_topic_, rclcpp::SensorDataQoS(),
       std::bind(&InterceptController::odometryCallback, this, std::placeholders::_1));
     target_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       target_topic_, 10,

@@ -14,9 +14,13 @@ def generate_launch_description():
         "target_projection.yaml",
     )
     use_sim_time = LaunchConfiguration("use_sim_time")
+    odometry_topic = LaunchConfiguration("odometry_topic")
 
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value="true"),
+        DeclareLaunchArgument(
+            "odometry_topic", default_value="/ground_truth/odom"
+        ),
         Node(
             package="robot_perception",
             executable="color_detection",
@@ -26,7 +30,13 @@ def generate_launch_description():
         Node(
             package="robot_perception",
             executable="target_projector",
-            parameters=[config, {"use_sim_time": use_sim_time}],
+            parameters=[
+                config,
+                {
+                    "odometry_topic": odometry_topic,
+                    "use_sim_time": use_sim_time,
+                },
+            ],
             output="screen",
         ),
     ])
