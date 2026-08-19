@@ -108,6 +108,8 @@ def test_frames_and_typed_nav2_launch_parameters_are_consistent():
     assert "ParameterValue(use_sim_time, value_type=bool)" in nav2_launch
     assert "ParameterValue(map_file, value_type=str)" in nav2_launch
     assert "ParameterValue(autostart, value_type=bool)" in nav2_launch
+    assert "width: 4\n" in nav2_config
+    assert "height: 4\n" in nav2_config
 
 
 def test_nav2_stack_is_static_map_ackermann_and_forward_only():
