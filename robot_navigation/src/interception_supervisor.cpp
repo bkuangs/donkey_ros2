@@ -159,7 +159,7 @@ private:
   {
     NavigateToPose::Goal goal;
     goal.pose.header.frame_id = planning_frame_;
-    goal.pose.header.stamp = now.to_msg();
+    goal.pose.header.stamp = now;
     goal.pose.pose.position.x = goal_x;
     goal.pose.pose.position.y = goal_y;
     const double heading = std::atan2(
