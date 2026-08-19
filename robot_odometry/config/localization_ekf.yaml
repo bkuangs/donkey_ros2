@@ -2,6 +2,7 @@ localization_ekf:
   ros__parameters:
     frequency: 30.0
     sensor_timeout: 0.2
+    predict_to_current_time: true
     two_d_mode: true
     publish_tf: true
 
