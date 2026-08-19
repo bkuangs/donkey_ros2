@@ -18,4 +18,3 @@ rgbd_odometry:
     # The deterministic arena yields 36-43 matches but typically 10-17 inliers.
     "Vis/MinInliers": "10"
     "Reg/Force3DoF": "true"
-    "Odom/GuessMotion": "false"
