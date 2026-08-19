@@ -56,10 +56,11 @@ run successfully.
 ## v2: Measured Ego Localization
 
 The implemented v2 path uses `rtabmap_odom/rgbd_odometry` with the existing RGB,
-depth, and camera-info streams. It publishes `/localization/odom` and
-`odom -> base_footprint`; a launch-time static `map -> odom` transform seeds the
-known initial robot pose. This avoids runtime ego truth without adding the IMU
-and reset scope required by monocular VIO.
+depth, and camera-info streams. A planar `robot_localization` EKF combines its
+x/y/yaw pose with encoder-derived wheel velocity, then publishes
+`/localization/odom` and `odom -> base_footprint`. A launch-time static
+`map -> odom` transform seeds the known initial robot pose. This avoids runtime
+ego truth without adding the IMU and reset scope required by monocular VIO.
 
 The v2 launch routes `/localization/odom` to target projection, Nav2, the
 interception supervisor, and terminal control, while disabling the v1

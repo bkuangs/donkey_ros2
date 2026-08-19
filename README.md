@@ -25,7 +25,7 @@ The v0 path uses four application nodes:
 | `robot_perception` | HSV detection and synchronized RGB-D projection |
 | `robot_tracking` | Constant-velocity target Kalman filter |
 | `robot_navigation` | Intercept solve and direct Ackermann pursuit control |
-| `robot_odometry` | RTAB-Map RGB-D ego odometry and initial map alignment |
+| `robot_odometry` | Wheel/RGB-D ego odometry fusion and initial map alignment |
 
 ### v1 data flow
 
@@ -53,11 +53,15 @@ the forward camera's view.
 
 ### v2 data flow
 
-v2 replaces application use of ego truth with RGB-D odometry:
+v2 replaces application use of ego truth with fused measured odometry:
 
 ```text
 /camera/image_raw + /camera/depth_image + /camera/camera_info
-                         -> rgbd_odometry -> /localization/odom
+                         -> rgbd_odometry -> /localization/visual_odom
+                                                            |
+/ackermann_steering_controller/odometry ------> localization_ekf
+                                                            |
+                                             /localization/odom
                                              + odom -> base_footprint
 known initial pose --------------------------> map -> odom
 ```

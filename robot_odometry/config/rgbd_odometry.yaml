@@ -2,7 +2,7 @@ rgbd_odometry:
   ros__parameters:
     frame_id: base_footprint
     odom_frame_id: odom
-    publish_tf: true
+    publish_tf: false
     subscribe_rgbd: false
 
     approx_sync: true

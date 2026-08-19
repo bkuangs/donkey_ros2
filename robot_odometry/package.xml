@@ -3,7 +3,7 @@
 <package format="3">
   <name>robot_odometry</name>
   <version>0.0.0</version>
-  <description>RGB-D visual odometry launch assets for robot localization</description>
+  <description>RGB-D and wheel odometry fusion assets for robot localization</description>
   <maintainer email="kuangbrian71@gmail.com">bkuang</maintainer>
   <license>Apache-2.0</license>
 
@@ -11,6 +11,7 @@
 
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
   <exec_depend>rtabmap_odom</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
 

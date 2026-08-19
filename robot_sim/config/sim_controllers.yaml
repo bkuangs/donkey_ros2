@@ -31,6 +31,7 @@ ackermann_steering_controller:
     # Frames
     odom_frame_id: odom
     base_frame_id: base_footprint
+    twist_covariance_diagonal: [0.01, 0.01, 1.0, 1.0, 1.0, 0.02]
     # The v0 application consumes simulator ground truth instead of wheel odometry.
     enable_odom_tf: false
 

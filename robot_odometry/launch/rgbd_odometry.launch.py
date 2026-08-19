@@ -14,12 +14,17 @@ def generate_launch_description():
     rgb_topic = LaunchConfiguration("rgb_topic")
     depth_topic = LaunchConfiguration("depth_topic")
     camera_info_topic = LaunchConfiguration("camera_info_topic")
+    wheel_odom_topic = LaunchConfiguration("wheel_odom_topic")
     odom_topic = LaunchConfiguration("odom_topic")
     use_sim_time_parameter = ParameterValue(use_sim_time, value_type=bool)
 
-    config = PathJoinSubstitution(
+    rgbd_config = PathJoinSubstitution(
         [FindPackageShare("robot_odometry"), "config", "rgbd_odometry.yaml"]
     )
+    ekf_config = PathJoinSubstitution(
+        [FindPackageShare("robot_odometry"), "config", "localization_ekf.yaml"]
+    )
+    visual_odom_topic = "/localization/visual_odom"
 
     return LaunchDescription(
         [
@@ -33,6 +38,10 @@ def generate_launch_description():
                 "camera_info_topic", default_value="/camera/camera_info"
             ),
             DeclareLaunchArgument(
+                "wheel_odom_topic",
+                default_value="/ackermann_steering_controller/odometry",
+            ),
+            DeclareLaunchArgument(
                 "odom_topic", default_value="/localization/odom"
             ),
             Node(
@@ -40,13 +49,27 @@ def generate_launch_description():
                 executable="rgbd_odometry",
                 name="rgbd_odometry",
                 output="screen",
-                parameters=[config, {"use_sim_time": use_sim_time_parameter}],
+                parameters=[rgbd_config, {"use_sim_time": use_sim_time_parameter}],
                 remappings=[
                     ("rgb/image", rgb_topic),
                     ("depth/image", depth_topic),
                     ("rgb/camera_info", camera_info_topic),
-                    ("odom", odom_topic),
+                    ("odom", visual_odom_topic),
                 ],
+            ),
+            Node(
+                package="robot_localization",
+                executable="ekf_node",
+                name="localization_ekf",
+                output="screen",
+                parameters=[
+                    ekf_config,
+                    {
+                        "use_sim_time": use_sim_time_parameter,
+                        "odom0": wheel_odom_topic,
+                    },
+                ],
+                remappings=[("odometry/filtered", odom_topic)],
             ),
             Node(
                 package="tf2_ros",
