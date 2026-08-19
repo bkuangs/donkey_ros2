@@ -17,6 +17,7 @@ def test_odometry_configuration():
     assert parameters["subscribe_rgbd"] is False
     assert parameters["approx_sync"] is True
     assert parameters["qos"] == parameters["qos_camera_info"] == 2
+    assert parameters["Vis/MinInliers"] == "10"
 
 
 def test_manifest_runtime_dependencies():
