@@ -26,6 +26,7 @@ def generate_launch_description():
     target_y = LaunchConfiguration("target_y")
     target_yaw = LaunchConfiguration("target_yaw")
     mode_topic = LaunchConfiguration("mode_topic")
+    measured_ego_topic = LaunchConfiguration("measured_ego_topic")
     trial_timeout = LaunchConfiguration("trial_timeout")
 
     intercept = IncludeLaunchDescription(
@@ -61,7 +62,10 @@ def generate_launch_description():
             "capture_dwell": 0.2,
             "trial_timeout": ParameterValue(trial_timeout, value_type=float),
             "evaluate_localization": True,
-            "measured_ego_topic": "/localization/odom",
+            "measured_ego_topic": ParameterValue(
+                measured_ego_topic,
+                value_type=str,
+            ),
             "initial_x": ParameterValue(robot_x, value_type=float),
             "initial_y": ParameterValue(robot_y, value_type=float),
             "initial_yaw": ParameterValue(robot_yaw, value_type=float),
@@ -87,6 +91,10 @@ def generate_launch_description():
         DeclareLaunchArgument("target_y", default_value="0.0"),
         DeclareLaunchArgument("target_yaw", default_value="1.57079632679"),
         DeclareLaunchArgument("trial_timeout", default_value="45.0"),
+        DeclareLaunchArgument(
+            "measured_ego_topic",
+            default_value="/localization/odom",
+        ),
         DeclareLaunchArgument(
             "mode_topic",
             default_value="/navigation/cmd_vel_owner",
