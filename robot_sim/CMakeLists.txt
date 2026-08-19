@@ -7,7 +7,10 @@ install(
   PROGRAMS
     scripts/cmd_vel_stamper.py
     scripts/run_trials.py
+    scripts/run_v1_trials.py
     scripts/trial_evaluator.py
+    scripts/v1_obstacle_geometry.py
+    scripts/v1_trial_evaluator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -21,6 +24,14 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     red_ball_model_test
     test/test_red_ball_model.py
+  )
+  ament_add_pytest_test(
+    v1_obstacles_test
+    test/test_v1_obstacles.py
+  )
+  ament_add_pytest_test(
+    v1_integration_contracts_test
+    test/test_v1_integration_contracts.py
   )
 endif()
 

@@ -6,7 +6,7 @@ ROS 2 simulation sandbox for moving object tracking and interception using an Ac
 
 ## Architecture
 
-For v0, we begin by using four nodes:
+The v0 path uses four application nodes:
 
 ```text
 /camera/image_raw
@@ -25,6 +25,30 @@ For v0, we begin by using four nodes:
 | `robot_perception` | HSV detection and synchronized RGB-D projection |
 | `robot_tracking` | Constant-velocity target Kalman filter |
 | `robot_navigation` | Intercept solve and direct Ackermann pursuit control |
+
+### v1 data flow
+
+v1 keeps `/ground_truth/odom` for ego pose and adds two fixed chicane barriers,
+a matching static Nav2 map, and explicit command ownership:
+
+```text
+/camera/* -> color_detection -> target_projector -> target_ekf
+                                                    |
+/ground_truth/odom -> ground_truth_tf -> Nav2 <-----+ (mid-course goal)
+                                         |
+                              /cmd_vel/nav2
+/tracking/target_state -> direct terminal controller -> /cmd_vel/terminal
+                                                     |
+/navigation/cmd_vel_owner (STOP=0, NAV2=1, TERMINAL=2)
+                  -> command_arbiter -> /cmd_vel
+```
+
+The supervisor sends estimated intercept goals to Nav2 outside the terminal
+radius and gives the direct controller ownership inside it. Application nodes
+consume camera-derived target state only; `/target/ground_truth/odom` is
+reserved for trial evaluation. The fixed obstacles are known to the static map.
+No dynamic obstacle sensing is configured, and trials start with the target in
+the forward camera's view.
 
 ## Scenario
 
@@ -57,6 +81,13 @@ source install/setup.bash
 ros2 launch robot_sim intercept.launch.py
 ```
 
+The original command above and `intercept_arena.sdf` remain the v0 path. Run
+the implemented v1 stack separately:
+
+```bash
+ros2 launch robot_sim v1_intercept.launch.py
+```
+
 The default target starts at `(3, 0)` with the vehicle facing it. Robot and
 target initial conditions are launch arguments:
 
@@ -81,6 +112,23 @@ Each trial randomizes the target phase and the vehicle pose while initially
 aiming the forward camera toward the target. `trial_results/summary.json`
 contains each seed, minimum center distance, capture time, target-estimation
 RMSE, and termination reason.
+
+### v1 trial gate
+
+```bash
+ros2 run robot_sim run_v1_trials.py \
+  --trials 10 \
+  --required-successes 8 \
+  --output-dir v1_trial_results
+```
+
+The proposed completion gate is at least 8 captures across the 10 deterministic
+scenarios, zero fixed-obstacle contacts, complete collision samples for every
+trial, and bounded per-trial/process timeouts. The runner writes per-trial logs
+and JSON plus `summary.json`, including initial conditions, termination reason,
+capture and contact counts, clearances, owner transitions, and estimation
+errors. The implementation and static contracts are validated in this
+repository; no ROS/Gazebo gate result is recorded here.
 
 ## Roadmap
 

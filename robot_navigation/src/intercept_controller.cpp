@@ -21,7 +21,8 @@ public:
       "odometry_topic", "/ground_truth/odom");
     target_topic_ = this->declare_parameter<std::string>(
       "target_topic", "/tracking/target_state");
-    command_topic_ = this->declare_parameter<std::string>("command_topic", "/cmd_vel");
+    command_topic_ = this->declare_parameter<std::string>(
+      "command_topic", "/cmd_vel/terminal");
     planning_frame_ = this->declare_parameter<std::string>("planning_frame", "odom");
     maximum_speed_ = this->declare_parameter<double>("maximum_speed", 1.0);
     minimum_speed_ = this->declare_parameter<double>("minimum_speed", 0.15);
