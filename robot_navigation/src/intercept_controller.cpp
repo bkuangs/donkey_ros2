@@ -55,7 +55,7 @@ public:
     }
 
     odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      odometry_topic_, 10,
+      odometry_topic_, rclcpp::SensorDataQoS(),
       std::bind(&InterceptController::odometryCallback, this, std::placeholders::_1));
     target_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       target_topic_, 10,

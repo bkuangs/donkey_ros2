@@ -63,7 +63,7 @@ public:
     auto owner_qos = rclcpp::QoS(1).reliable().transient_local();
     owner_pub_ = this->create_publisher<std_msgs::msg::UInt8>(owner_topic_, owner_qos);
     odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      odometry_topic_, 10,
+      odometry_topic_, rclcpp::SensorDataQoS(),
       std::bind(&InterceptionSupervisor::odometryCallback, this, std::placeholders::_1));
     target_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       target_topic_, 10,
