@@ -13,6 +13,8 @@ from std_msgs.msg import UInt8
 
 from trial_evaluation import (
     CaptureDwell,
+    LocalizationErrors,
+    PlanarTransform,
     TrackingErrors,
     stamp_seconds,
     write_result,
@@ -42,6 +44,13 @@ class V1TrialEvaluator(Node):
         self.declare_parameter("seed", 0)
         self.declare_parameter("scenario", "")
         self.declare_parameter("output_path", "v1_trial_result.json")
+        self.declare_parameter("evaluate_localization", False)
+        self.declare_parameter("measured_ego_topic", "/localization/odom")
+        self.declare_parameter("initial_x", 0.0)
+        self.declare_parameter("initial_y", 0.0)
+        self.declare_parameter("initial_yaw", 0.0)
+        self.declare_parameter("localization_discontinuity_position", 0.75)
+        self.declare_parameter("localization_discontinuity_yaw", 0.75)
 
         self.capture_radius = self.get_parameter("capture_radius").value
         self.capture_dwell = self.get_parameter("capture_dwell").value
@@ -52,8 +61,23 @@ class V1TrialEvaluator(Node):
         self.seed = self.get_parameter("seed").value
         self.scenario = self.get_parameter("scenario").value
         self.output_path = Path(self.get_parameter("output_path").value)
+        self.evaluate_localization = self.get_parameter(
+            "evaluate_localization"
+        ).value
+        self.initial_transform = PlanarTransform(
+            self.get_parameter("initial_x").value,
+            self.get_parameter("initial_y").value,
+            self.get_parameter("initial_yaw").value,
+        )
+        self.localization_discontinuity_position = self.get_parameter(
+            "localization_discontinuity_position"
+        ).value
+        self.localization_discontinuity_yaw = self.get_parameter(
+            "localization_discontinuity_yaw"
+        ).value
 
         self.ego = None
+        self.measured_ego = None
         self.target = None
         self.estimate = None
         self.first_stamp = None
@@ -68,6 +92,14 @@ class V1TrialEvaluator(Node):
         self.mode_transitions = []
         self.last_mode = None
         self.tracking_errors = TrackingErrors()
+        self.localization_errors = LocalizationErrors()
+        self.localization_opportunities = 0
+        self.localization_available_opportunities = 0
+        self.last_truth_evaluation_stamp = None
+        self.last_measured_stamp = None
+        self.last_measured_evaluation_stamp = None
+        self.first_measured_stamp = None
+        self.timestamp_regression = False
         self.finished = False
         self.success = False
         self.started_at = time.monotonic()
@@ -84,6 +116,13 @@ class V1TrialEvaluator(Node):
             self.target_callback,
             10,
         )
+        if self.evaluate_localization:
+            self.create_subscription(
+                Odometry,
+                self.get_parameter("measured_ego_topic").value,
+                self.measured_ego_callback,
+                10,
+            )
         self.create_subscription(
             Odometry,
             self.get_parameter("estimate_topic").value,
@@ -110,6 +149,15 @@ class V1TrialEvaluator(Node):
     def target_callback(self, message):
         self.target = message
 
+    def measured_ego_callback(self, message):
+        stamp = stamp_seconds(message)
+        if self.last_measured_stamp is not None and stamp < self.last_measured_stamp:
+            self.timestamp_regression = True
+        self.last_measured_stamp = stamp
+        if self.first_measured_stamp is None:
+            self.first_measured_stamp = stamp
+        self.measured_ego = message
+
     def estimate_callback(self, message):
         self.estimate = message
 
@@ -132,8 +180,58 @@ class V1TrialEvaluator(Node):
         ):
             return
 
-        self.tracking_errors.add(self.estimate, self.target)
+        estimate_transform = (
+            self.initial_transform if self.evaluate_localization else None
+        )
+        self.tracking_errors.add(
+            self.estimate,
+            self.target,
+            estimate_transform=estimate_transform,
+        )
         self.estimate = None
+
+    def evaluate_localization_sample(self, ego_stamp):
+        if not self.evaluate_localization:
+            return
+        if (
+            self.last_truth_evaluation_stamp is not None
+            and ego_stamp < self.last_truth_evaluation_stamp
+        ):
+            self.timestamp_regression = True
+        if ego_stamp == self.last_truth_evaluation_stamp:
+            return
+        self.last_truth_evaluation_stamp = ego_stamp
+        self.localization_opportunities += 1
+        if self.measured_ego is None:
+            return
+        measured_stamp = stamp_seconds(self.measured_ego)
+        if abs(ego_stamp - measured_stamp) > self.sync_tolerance:
+            return
+        self.localization_available_opportunities += 1
+        if measured_stamp == self.last_measured_evaluation_stamp:
+            return
+        self.last_measured_evaluation_stamp = measured_stamp
+        measured_position = self.measured_ego.pose.pose.position
+        measured_yaw = yaw_from_quaternion(
+            self.measured_ego.pose.pose.orientation
+        )
+        measured_pose = self.initial_transform.pose(
+            measured_position.x,
+            measured_position.y,
+            measured_yaw,
+        )
+        truth_position = self.ego.pose.pose.position
+        truth_pose = (
+            truth_position.x,
+            truth_position.y,
+            yaw_from_quaternion(self.ego.pose.pose.orientation),
+        )
+        self.localization_errors.add(
+            measured_pose,
+            truth_pose,
+            self.localization_discontinuity_position,
+            self.localization_discontinuity_yaw,
+        )
 
     def evaluate_obstacles(self, elapsed):
         self.collision_samples += 1
@@ -178,6 +276,10 @@ class V1TrialEvaluator(Node):
             self.first_stamp = current_stamp
 
         elapsed = current_stamp - self.first_stamp
+        self.evaluate_localization_sample(ego_stamp)
+        if self.evaluate_localization and self.timestamp_regression:
+            self.finish(False, "localization_timestamp_regression", elapsed)
+            return
         distance = math.hypot(
             self.ego.pose.pose.position.x - self.target.pose.pose.position.x,
             self.ego.pose.pose.position.y - self.target.pose.pose.position.y,
@@ -197,6 +299,13 @@ class V1TrialEvaluator(Node):
             self.finish(False, "trial_timeout", elapsed)
 
     def finish(self, success, reason, elapsed):
+        if (
+            self.evaluate_localization
+            and success
+            and self.localization_errors.samples == 0
+        ):
+            success = False
+            reason = "localization_unavailable"
         position_rmse, velocity_rmse = self.tracking_errors.rmses()
         finite_clearances = {
             name: clearance if math.isfinite(clearance) else None
@@ -208,7 +317,7 @@ class V1TrialEvaluator(Node):
             if clearance is not None
         ]
         result = {
-            "version": 1,
+            "version": 2 if self.evaluate_localization else 1,
             "seed": self.seed,
             "scenario": self.scenario,
             "success": success,
@@ -244,11 +353,52 @@ class V1TrialEvaluator(Node):
             "target_velocity_rmse": velocity_rmse,
             "estimate_samples": self.tracking_errors.samples,
         }
+        if self.evaluate_localization:
+            localization = self.localization_errors.metrics()
+            availability = (
+                self.localization_available_opportunities
+                / self.localization_opportunities
+                if self.localization_opportunities
+                else 0.0
+            )
+            result.update({
+                "ego_position_rmse": localization["position_rmse"],
+                "ego_yaw_rmse": localization["yaw_rmse"],
+                "ego_max_position_error": localization[
+                    "maximum_position_error"
+                ],
+                "ego_max_yaw_error": localization["maximum_yaw_error"],
+                "ego_final_position_error": localization[
+                    "final_position_error"
+                ],
+                "ego_final_yaw_error": localization["final_yaw_error"],
+                "localization_samples": self.localization_errors.samples,
+                "localization_expected_samples": (
+                    self.localization_opportunities
+                ),
+                "localization_availability": availability,
+                "localization_discontinuity_count": (
+                    self.localization_errors.discontinuities
+                ),
+                "localization_timestamp_regression": (
+                    self.timestamp_regression
+                ),
+                "localization_data_complete": (
+                    self.localization_errors.samples > 0
+                    and self.localization_opportunities > 0
+                    and not self.timestamp_regression
+                ),
+                "evaluation_reset": {
+                    "policy": "fresh_process",
+                    "first_truth_stamp": self.first_stamp,
+                    "first_localization_stamp": self.first_measured_stamp,
+                },
+            })
         write_result(self.output_path, result)
         self.success = success
         self.finished = True
         self.get_logger().info(
-            f"V1 trial {self.seed} finished: {reason}, "
+            f"V{result['version']} trial {self.seed} finished: {reason}, "
             f"minimum distance={result['minimum_distance']}, "
             f"minimum clearance={result['minimum_obstacle_clearance']}"
         )

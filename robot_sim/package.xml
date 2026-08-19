@@ -18,6 +18,7 @@
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_navigation</exec_depend>
   <exec_depend>robot_nav2</exec_depend>
+  <exec_depend>robot_odometry</exec_depend>
   <exec_depend>robot_perception</exec_depend>
   <exec_depend>robot_tracking</exec_depend>
   <exec_depend>gz_ros2_control</exec_depend>

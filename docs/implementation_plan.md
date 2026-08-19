@@ -55,11 +55,31 @@ run successfully.
 
 ## v2: Measured Ego Localization
 
-Replace `/ground_truth/odom` at the existing projector and controller
-interfaces. Decide deliberately between RGB-D odometry for robustness and
-monocular VIO for the observability learning objective. Require bounded
-position/yaw error and documented reset behavior before localization becomes
-the default.
+The implemented v2 path uses `rtabmap_odom/rgbd_odometry` with the existing RGB,
+depth, and camera-info streams. It publishes `/localization/odom` and
+`odom -> base_footprint`; a launch-time static `map -> odom` transform seeds the
+known initial robot pose. This avoids runtime ego truth without adding the IMU
+and reset scope required by monocular VIO.
+
+The v2 launch routes `/localization/odom` to target projection, Nav2, the
+interception supervisor, and terminal control, while disabling the v1
+ground-truth TF adapter. Ground-truth ego and target topics remain available
+only to the trial evaluator.
+
+Run with:
+
+```bash
+ros2 launch robot_sim v2_intercept.launch.py
+ros2 run robot_sim run_v2_trials.py --trials 10 --required-successes 8
+```
+
+The gate reuses the ten deterministic v1 scenarios and requires at least eight
+captures, zero obstacle contacts, complete collision/localization data, position
+RMSE no greater than 0.20 m, yaw RMSE no greater than 0.15 rad, final position
+error no greater than 0.30 m, and localization availability of at least 95% in
+every trial. Trials use fresh processes; timestamp regressions and missing
+localization fail closed. ROS/Gazebo results are not recorded until this gate is
+run on a Jazzy system with RTAB-Map.
 
 ## v3: Resilience
 

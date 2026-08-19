@@ -59,6 +59,83 @@ def evaluate_gate(results, required_successes):
     return successes, obstacle_contacts, contact_data_complete, passed
 
 
+def run_scenarios(
+    arguments,
+    launch_file="v1_trial.launch.py",
+    version=1,
+    partition_prefix="target_intercept_v1",
+):
+    arguments.output_dir.mkdir(parents=True, exist_ok=True)
+    results = []
+    for index, scenario in enumerate(V1_SCENARIOS[:arguments.trials]):
+        geometry = scenario_geometry(scenario)
+        result_path = (
+            arguments.output_dir / f"trial_{index + 1:02d}.json"
+        ).resolve()
+        log_path = (
+            arguments.output_dir / f"trial_{index + 1:02d}.log"
+        ).resolve()
+        result_path.unlink(missing_ok=True)
+        log_path.unlink(missing_ok=True)
+        command = [
+            "ros2",
+            "launch",
+            "robot_sim",
+            launch_file,
+            f"seed:={geometry['seed']}",
+            f"scenario:={geometry['name']}",
+            f"output_path:={result_path}",
+            f"robot_x:={geometry['robot_x']}",
+            f"robot_y:={geometry['robot_y']}",
+            f"robot_yaw:={geometry['robot_yaw']}",
+            f"target_x:={geometry['target_x']}",
+            f"target_y:={geometry['target_y']}",
+            f"target_yaw:={geometry['target_yaw']}",
+            f"trial_timeout:={arguments.trial_timeout}",
+            f"mode_topic:={arguments.mode_topic}",
+        ]
+        environment = os.environ.copy()
+        environment["GZ_PARTITION"] = f"{partition_prefix}_{geometry['seed']}"
+        environment["ROS_DOMAIN_ID"] = str(index + 1)
+        return_code = run_trial(
+            command,
+            arguments.timeout,
+            log_path,
+            environment,
+        )
+        if result_path.exists():
+            result = json.loads(result_path.read_text())
+        else:
+            result = {
+                "version": version,
+                "seed": geometry["seed"],
+                "scenario": geometry["name"],
+                "success": False,
+                "captured": False,
+                "reason": "launch_failure",
+                "termination_reason": "launch_failure",
+                "return_code": return_code,
+                "collision_data_complete": False,
+            }
+            if version == 2:
+                result["localization_data_complete"] = False
+                result["localization_availability"] = 0.0
+        result["return_code"] = return_code
+        result["initial_conditions"] = {
+            key: value
+            for key, value in geometry.items()
+            if key not in ("name", "seed")
+        }
+        results.append(result)
+        print(
+            f"[{index + 1}/{arguments.trials}] "
+            f"scenario={geometry['name']} success={result['success']} "
+            f"reason={result['reason']} "
+            f"contacts={result.get('obstacle_contact_count', 'unknown')}"
+        )
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=10)
@@ -80,71 +157,7 @@ def main():
     if arguments.timeout <= arguments.trial_timeout:
         parser.error("process timeout must be longer than trial timeout")
 
-    arguments.output_dir.mkdir(parents=True, exist_ok=True)
-    results = []
-    for index, scenario in enumerate(V1_SCENARIOS[:arguments.trials]):
-        geometry = scenario_geometry(scenario)
-        result_path = (
-            arguments.output_dir / f"trial_{index + 1:02d}.json"
-        ).resolve()
-        log_path = (
-            arguments.output_dir / f"trial_{index + 1:02d}.log"
-        ).resolve()
-        result_path.unlink(missing_ok=True)
-        log_path.unlink(missing_ok=True)
-        command = [
-            "ros2",
-            "launch",
-            "robot_sim",
-            "v1_trial.launch.py",
-            f"seed:={geometry['seed']}",
-            f"scenario:={geometry['name']}",
-            f"output_path:={result_path}",
-            f"robot_x:={geometry['robot_x']}",
-            f"robot_y:={geometry['robot_y']}",
-            f"robot_yaw:={geometry['robot_yaw']}",
-            f"target_x:={geometry['target_x']}",
-            f"target_y:={geometry['target_y']}",
-            f"target_yaw:={geometry['target_yaw']}",
-            f"trial_timeout:={arguments.trial_timeout}",
-            f"mode_topic:={arguments.mode_topic}",
-        ]
-        environment = os.environ.copy()
-        environment["GZ_PARTITION"] = f"target_intercept_v1_{geometry['seed']}"
-        environment["ROS_DOMAIN_ID"] = str(index + 1)
-        return_code = run_trial(
-            command,
-            arguments.timeout,
-            log_path,
-            environment,
-        )
-        if result_path.exists():
-            result = json.loads(result_path.read_text())
-        else:
-            result = {
-                "version": 1,
-                "seed": geometry["seed"],
-                "scenario": geometry["name"],
-                "success": False,
-                "captured": False,
-                "reason": "launch_failure",
-                "termination_reason": "launch_failure",
-                "return_code": return_code,
-                "collision_data_complete": False,
-            }
-        result["return_code"] = return_code
-        result["initial_conditions"] = {
-            key: value
-            for key, value in geometry.items()
-            if key not in ("name", "seed")
-        }
-        results.append(result)
-        print(
-            f"[{index + 1}/{arguments.trials}] "
-            f"scenario={geometry['name']} success={result['success']} "
-            f"reason={result['reason']} "
-            f"contacts={result.get('obstacle_contact_count', 'unknown')}"
-        )
+    results = run_scenarios(arguments)
 
     (
         successes,

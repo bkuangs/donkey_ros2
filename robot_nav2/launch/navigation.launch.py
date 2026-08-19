@@ -3,6 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -14,6 +15,8 @@ def generate_launch_description():
     autostart = LaunchConfiguration("autostart")
     params_file = LaunchConfiguration("params_file")
     map_file = LaunchConfiguration("map")
+    odometry_topic = LaunchConfiguration("odometry_topic")
+    use_ground_truth_tf = LaunchConfiguration("use_ground_truth_tf")
     use_sim_time_parameter = ParameterValue(use_sim_time, value_type=bool)
     behavior_tree = os.path.join(
         package_share,
@@ -34,6 +37,10 @@ def generate_launch_description():
             DeclareLaunchArgument("use_sim_time", default_value="true"),
             DeclareLaunchArgument("autostart", default_value="true"),
             DeclareLaunchArgument(
+                "odometry_topic", default_value="/ground_truth/odom"
+            ),
+            DeclareLaunchArgument("use_ground_truth_tf", default_value="true"),
+            DeclareLaunchArgument(
                 "params_file",
                 default_value=os.path.join(package_share, "config", "nav2.yaml"),
             ),
@@ -47,6 +54,7 @@ def generate_launch_description():
                 name="ground_truth_tf",
                 output="screen",
                 parameters=common_parameters,
+                condition=IfCondition(use_ground_truth_tf),
             ),
             Node(
                 package="nav2_map_server",
@@ -76,7 +84,7 @@ def generate_launch_description():
                 parameters=common_parameters,
                 remappings=[
                     ("cmd_vel", "/cmd_vel/nav2"),
-                    ("odom", "/ground_truth/odom"),
+                    ("odom", odometry_topic),
                 ],
             ),
             Node(
@@ -88,6 +96,7 @@ def generate_launch_description():
                     params_file,
                     {
                         "default_nav_to_pose_bt_xml": behavior_tree,
+                        "odom_topic": odometry_topic,
                         "use_sim_time": use_sim_time_parameter,
                     },
                 ],
