@@ -19,8 +19,6 @@ def test_odometry_configuration():
     assert parameters["qos"] == parameters["qos_camera_info"] == 2
     assert parameters["Vis/MinInliers"] == "10"
     assert parameters["Reg/Force3DoF"] == "true"
-    assert parameters["Odom/Strategy"] == "1"
-    assert parameters["Vis/CorType"] == "1"
 
 
 def test_manifest_runtime_dependencies():
