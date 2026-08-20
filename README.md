@@ -2,9 +2,9 @@
 
 ROS 2 simulation sandbox for moving object tracking and interception using an Ackermann-steered vehicle. We incrementally increase the complexity of the scenario (v0, v1, v2, ...) to validate simpler logic and theory before moving onto more complexity.  
 
-The vehicle is forward-only and assumes the target is initially visible. Steering 
+An Ackermann vehicle has a constant forward velocity, with steering 
 is limited by the 0.24m wheelbase and 0.6rad steering limit; linear acceleration and
-deceleration are also bounded.
+deceleration are also bounded. We assume the target is initially visible.
 
 <img src="assets/v1.gif" alt="v1 target interception trial" width="500">
 
